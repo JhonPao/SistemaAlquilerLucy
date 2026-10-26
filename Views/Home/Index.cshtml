@@ -1,0 +1,216 @@
+﻿@using System.Globalization
+@model AlquilerVestimentasLucy.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Panel general";
+    ViewData["ActiveNav"] = "panel";
+
+    var dias = new[] { "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado" };
+    var meses = new[] { "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "setiembre", "octubre", "noviembre", "diciembre" };
+    var fechaHoy = $"{dias[(int)DateTime.Now.DayOfWeek]}, {DateTime.Now.Day} de {meses[DateTime.Now.Month - 1]}";
+    var vencido = Model.ProximasDevoluciones.FirstOrDefault(p => p.Vencido);
+}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Un día en orden, @Model.Nombre</h1>
+        <p class="page-sub">@fechaHoy · Revisa lo que necesita atención en el taller.</p>
+    </div>
+    <a class="btn btn-primary" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Nuevo alquiler" asp-route-clave="alquileres">
+        <span class="icon icon-plus"></span>Nuevo alquiler
+    </a>
+</div>
+
+<div class="kpi-grid">
+    <article class="kpi">
+        <span class="kpi-label">Contratos vigentes</span>
+        <span class="kpi-value">@Model.ContratosVigentes</span>
+        <span class="kpi-foot">@Model.PrendasFueraDelTaller prendas fuera del taller</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Devoluciones de hoy</span>
+        <span class="kpi-value">@Model.DevolucionesHoy</span>
+        <span class="kpi-foot">Registradas durante la jornada</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Vencidos con mora activa</span>
+        <span class="kpi-value">@Model.VencidosConMora</span>
+        <span class="kpi-foot">Tarifa de S/ @Model.TarifaMoraDiaria.ToString("0.00", CultureInfo.InvariantCulture) por día</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Prendas disponibles</span>
+        <span class="kpi-value green">@Model.PrendasDisponibles<span class="kpi-slash">/</span>@Model.TotalPrendas</span>
+        <span class="kpi-foot">Inventario activo del taller</span>
+    </article>
+</div>
+
+<div class="dash-grid">
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Próximas devoluciones</h2>
+                <p class="panel-sub">Ordenadas por fecha pactada de retorno</p>
+            </div>
+            <a class="panel-link" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Alquileres" asp-route-clave="alquileres">Ver alquileres</a>
+        </div>
+
+        @if (Model.ProximasDevoluciones.Count == 0)
+        {
+            <div class="empty">No hay contratos activos con devoluciones pendientes.</div>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Contrato / cliente</th>
+                        <th>Retorno pactado</th>
+                        <th class="center">Prendas</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.ProximasDevoluciones)
+                    {
+                        <tr>
+                            <td><span class="strong">@item.Contrato</span> · @item.Cliente</td>
+                            <td class="muted">@item.FechaPactada.ToString("dd MMM · HH:mm", CultureInfo.InvariantCulture)</td>
+                            <td class="center">@item.CantidadPrendas</td>
+                            <td>
+                                @if (item.Vencido)
+                                {
+                                    <span class="pill pill-vencido">Vencido</span>
+                                }
+                                else
+                                {
+                                    <span class="pill pill-vigente">Vigente</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (vencido is not null)
+        {
+            <div class="alert-block">
+                <strong>Prioridad: contrato @vencido.Contrato</strong>
+                Retorno pendiente desde el @vencido.FechaPactada.ToString("dd MMM", CultureInfo.InvariantCulture). Penalidad configurada: S/ @Model.TarifaMoraDiaria.ToString("0.00", CultureInfo.InvariantCulture) por día de retraso y contrato.
+            </div>
+        }
+        else
+        {
+            <div class="notice notice-success" style="margin-top:16px">
+                <span class="icon icon-circle-check"></span>
+                <span>No hay devoluciones vencidas. Todos los contratos están al día.</span>
+            </div>
+        }
+    </section>
+
+    <aside class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Alertas del taller</h2>
+            </div>
+            @if (Model.EnMantenimiento > 0 || Model.VencidosConMora > 0)
+            {
+                <span class="pill pill-atencion">Requiere atención</span>
+            }
+            else
+            {
+                <span class="pill pill-completado">Todo en orden</span>
+            }
+        </div>
+
+        @if (Model.EnMantenimiento > 0)
+        {
+            <div>
+                <p class="strong">@(Model.EnMantenimiento == 1 ? "Una prenda sigue en servicio" : $"{Model.EnMantenimiento} prendas siguen en servicio")</p>
+                <p class="panel-sub" style="margin-top:6px">Las prendas en mantenimiento están bloqueadas para el catálogo de alquiler hasta registrar su salida.</p>
+                <a class="panel-link" style="margin-top:10px" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Mantenimiento" asp-route-clave="mantenimiento">Abrir mantenimiento <span class="icon icon-chevron-right icon-xs"></span></a>
+            </div>
+        }
+        else
+        {
+            <div>
+                <p class="strong">Sin prendas en mantenimiento</p>
+                <p class="panel-sub" style="margin-top:6px">No hay órdenes de lavandería, costura o desinfección en curso.</p>
+            </div>
+        }
+
+        <div class="auth-divider" style="margin:18px 0"></div>
+
+        @if (Model.VencidosConMora > 0)
+        {
+            <div>
+                <p class="strong">Contratos con mora activa</p>
+                <p class="panel-sub" style="margin-top:6px">@Model.VencidosConMora @(Model.VencidosConMora == 1 ? "contrato superó" : "contratos superaron") la fecha pactada de devolución.</p>
+                <a class="panel-link" style="margin-top:10px" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Reportes y auditoría" asp-route-clave="reportes">Revisar reportes <span class="icon icon-chevron-right icon-xs"></span></a>
+            </div>
+        }
+        else
+        {
+            <div>
+                <p class="strong">Contratos al día</p>
+                <p class="panel-sub" style="margin-top:6px">Ningún contrato activo superó su fecha de retorno.</p>
+            </div>
+        }
+    </aside>
+</div>
+
+<div class="dash-grid dash-grid-even">
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Estado del vestuario</h2>
+                <p class="panel-sub">@Model.TotalPrendas @(Model.TotalPrendas == 1 ? "unidad física registrada" : "unidades físicas registradas")</p>
+            </div>
+        </div>
+
+        <div class="state-bar" role="img" aria-label="Distribución del inventario por estado">
+            @if (Model.TotalPrendas > 0)
+            {
+                <span class="s-disponible" style="width:@Model.PorcentajeDisponible.ToString("0.##", CultureInfo.InvariantCulture)%"></span>
+                <span class="s-alquilada" style="width:@Model.PorcentajeAlquilada.ToString("0.##", CultureInfo.InvariantCulture)%"></span>
+                <span class="s-mantenimiento" style="width:@Model.PorcentajeMantenimiento.ToString("0.##", CultureInfo.InvariantCulture)%"></span>
+                <span class="s-baja" style="width:@Model.PorcentajeBaja.ToString("0.##", CultureInfo.InvariantCulture)%"></span>
+            }
+        </div>
+
+        <div class="state-row"><span>Disponible</span><span>@Model.PrendasDisponibles @(Model.PrendasDisponibles == 1 ? "unidad" : "unidades")</span></div>
+        <div class="state-row"><span>Alquilada</span><span>@Model.Alquiladas @(Model.Alquiladas == 1 ? "unidad" : "unidades")</span></div>
+        <div class="state-row"><span>En Mantenimiento</span><span>@Model.EnMantenimiento @(Model.EnMantenimiento == 1 ? "unidad" : "unidades")</span></div>
+        <div class="state-row"><span>De Baja</span><span>@Model.DeBaja @(Model.DeBaja == 1 ? "unidad" : "unidades")</span></div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Actividad reciente</h2>
+                <p class="panel-sub">Últimos movimientos registrados en el sistema</p>
+            </div>
+        </div>
+
+        @if (Model.ActividadReciente.Count == 0)
+        {
+            <div class="empty">Todavía no hay movimientos registrados.</div>
+        }
+        else
+        {
+            <div class="activity-list">
+                @foreach (var movimiento in Model.ActividadReciente)
+                {
+                    <div class="activity-row">
+                        <span class="activity-time">@movimiento.Hora</span>
+                        <span class="activity-text">@movimiento.Movimiento</span>
+                        <span class="activity-by">@movimiento.Responsable</span>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="panel-foot">
+            <span>Respaldo de base de datos</span>
+            <span class="pill pill-neutral">Pendiente de configurar</span>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,394 @@
+@using AlquilerVestimentasLucy.Data
+@model AlquileresIndexViewModel
+@{
+    ViewData["Title"] = "Alquileres";
+    ViewData["ActiveNav"] = "alquileres";
+}
+
+@functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]}";
+
+    private static string FechaHoraCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} · {valor:HH:mm}";
+
+    private static string FechaLarga(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} {valor.Year}";
+
+    private static string Rango(DateTime desde, DateTime hasta) =>
+        desde.Year == hasta.Year && desde.Month == hasta.Month
+            ? $"{desde.Day}–{hasta.Day} {Meses[hasta.Month - 1]} {hasta.Year}"
+            : $"{FechaCorta(desde)} {desde.Year} — {FechaCorta(hasta)} {hasta.Year}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Cada contrato, bajo control</h1>
+        <p class="page-sub">
+            Revisa las salidas del taller, anticipa las devoluciones y emite contratos digitales sin perder trazabilidad.
+        </p>
+    </div>
+    @if (User.IsInRole(DbInitializer.RolAdministradora) || User.IsInRole(DbInitializer.RolVendedor))
+    {
+        <a class="btn btn-primary" asp-action="Create">
+            <span class="icon icon-plus"></span>Nuevo alquiler
+        </a>
+    }
+</div>
+
+<div class="kpi-grid rental-kpis">
+    <article class="kpi">
+        <span class="kpi-label">Vigentes</span>
+        <span class="kpi-value">@Model.KpiVigentes</span>
+        <span class="kpi-foot">
+            @(Model.KpiVencidos > 0
+                ? $"Incluye {Model.KpiVencidos} {(Model.KpiVencidos == 1 ? "contrato vencido" : "contratos vencidos")}"
+                : "Sin contratos vencidos")
+        </span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Pendientes de devolución</span>
+        <span class="kpi-value">@Model.KpiPendientes</span>
+        <span class="kpi-foot">@Model.PrendasPorRetornar @(Model.PrendasPorRetornar == 1 ? "prenda por retornar" : "prendas por retornar")</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Vencidos con mora activa</span>
+        <span class="kpi-value">@Model.KpiVencidos</span>
+        <span class="kpi-foot">@Moneda(Model.MoraEstimada) estimados al corte</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Devueltos</span>
+        <span class="kpi-value">@Model.KpiDevueltos</span>
+        <span class="kpi-foot">En el rango de ejemplo</span>
+    </article>
+</div>
+
+@if (Model.Alerta is not null)
+{
+    <div class="rental-alert">
+        <span class="icon icon-alert"></span>
+        <div class="rental-alert-body">
+            <strong>@Model.Alerta.Contrato requiere seguimiento</strong>
+            <p>
+                @Model.Alerta.Cliente · @Model.Alerta.CantidadPrendas
+                @(Model.Alerta.CantidadPrendas == 1 ? "prenda" : "prendas") ·
+                Retorno pactado: @FechaHoraCorta(Model.Alerta.FechaRetorno).
+            </p>
+            <p>
+                Corte de consulta: @FechaHoraCorta(Model.Alerta.FechaCorte).
+                Mora estimada: @Model.Alerta.DiasMora × @Moneda(Model.TarifaMora) =
+                <strong>@Moneda(Model.Alerta.MoraEstimada)</strong>.
+            </p>
+        </div>
+        <a class="btn btn-sm btn-secondary"
+           asp-action="Index"
+           asp-route-id="@Model.Alerta.IdAlquiler"
+           asp-route-estado="@Model.EstadoTab"
+           asp-route-q="@Model.Q"
+           asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+           asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">Revisar</a>
+    </div>
+}
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Listado de alquileres</h2>
+            <p class="panel-sub">Rango de salida: @Rango(Model.Desde, Model.Hasta)</p>
+        </div>
+        @if (User.IsInRole(DbInitializer.RolAdministradora) || User.IsInRole(DbInitializer.RolVendedor))
+        {
+            <a class="panel-link"
+               asp-action="Exportar"
+               asp-route-q="@Model.Q"
+               asp-route-estado="@Model.EstadoTab"
+               asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+               asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+                <span class="icon icon-download icon-xs"></span>Exportar contratos
+            </a>
+        }
+    </div>
+
+    <div class="tabs">
+        <a class="tab @(Model.EstadoTab == "todos" ? "active" : "")"
+           asp-action="Index" asp-route-estado="todos" asp-route-q="@Model.Q"
+           asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+           asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+            Todos <span>@Model.ConteoTodos</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "vigentes" ? "active" : "")"
+           asp-action="Index" asp-route-estado="vigentes" asp-route-q="@Model.Q"
+           asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+           asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+            Vigentes <span>@Model.ConteoVigentes</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "pendientes" ? "active" : "")"
+           asp-action="Index" asp-route-estado="pendientes" asp-route-q="@Model.Q"
+           asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+           asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+            Pendientes de devolución <span>@Model.ConteoPendientes</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "vencidos" ? "active" : "")"
+           asp-action="Index" asp-route-estado="vencidos" asp-route-q="@Model.Q"
+           asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+           asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+            Vencidos <span>@Model.ConteoVencidos</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "devueltos" ? "active" : "")"
+           asp-action="Index" asp-route-estado="devueltos" asp-route-q="@Model.Q"
+           asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+           asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+            Devueltos <span>@Model.ConteoDevueltos</span>
+        </a>
+    </div>
+
+    <form method="get" asp-action="Index" class="rental-filters">
+        <input type="hidden" name="estado" value="@Model.EstadoTab" />
+        <div class="search-field">
+            <span class="icon icon-search icon-sm"></span>
+            <input class="input"
+                   type="search"
+                   name="q"
+                   value="@Model.Q"
+                   placeholder="Contrato, DNI o nombre del cliente"
+                   aria-label="Buscar por contrato, DNI o nombre del cliente" />
+        </div>
+        <div class="date-range-box">
+            <span class="icon icon-calendar icon-sm" aria-hidden="true"></span>
+            <input type="date" name="desde" value="@Model.Desde.ToString("yyyy-MM-dd")" aria-label="Fecha inicial" />
+            <span class="date-range-sep">—</span>
+            <input type="date" name="hasta" value="@Model.Hasta.ToString("yyyy-MM-dd")" aria-label="Fecha final" />
+        </div>
+        <button class="btn btn-secondary" type="submit">
+            <span class="icon icon-filter"></span>Filtrar
+        </button>
+    </form>
+
+    @if (Model.Filas.Count == 0)
+    {
+        <div class="empty">
+            No encontramos contratos con esos criterios.
+            @if (Model.Q is not null || Model.EstadoTab != "todos")
+            {
+                <span> Prueba con otro contrato, cliente o rango de fechas.</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data-table rental-table">
+                <thead>
+                    <tr>
+                        <th>Contrato / cliente</th>
+                        <th>Prendas</th>
+                        <th>Salida / retorno</th>
+                        <th class="num">Alquiler</th>
+                        <th class="num">Garantía</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fila in Model.Filas)
+                    {
+                        <tr class="@(Model.Seleccionado?.IdAlquiler == fila.IdAlquiler ? "is-selected" : "")">
+                            <td>
+                                <a class="cell-title table-link"
+                                   asp-action="Index"
+                                   asp-route-id="@fila.IdAlquiler"
+                                   asp-route-estado="@Model.EstadoTab"
+                                   asp-route-q="@Model.Q"
+                                   asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+                                   asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+                                    @fila.Contrato
+                                </a>
+                                <span class="cell-sub">@fila.Cliente</span>
+                                <span class="cell-sub">DNI @fila.Dni</span>
+                            </td>
+                            <td>
+                                <span class="rental-codes">
+                                    @foreach (var prenda in fila.Prendas)
+                                    {
+                                        <span>@prenda</span>
+                                    }
+                                </span>
+                            </td>
+                            <td>
+                                <span class="cell-title">@FechaCorta(fila.FechaSalida) · @fila.FechaSalida.ToString("HH:mm")</span>
+                                <span class="cell-sub">@FechaCorta(fila.FechaRetorno) · @fila.FechaRetorno.ToString("HH:mm")</span>
+                            </td>
+                            <td class="num">@Moneda(fila.Subtotal)</td>
+                            <td class="num">@Moneda(fila.Garantia)</td>
+                            <td><span class="pill @fila.PillClass">@fila.Estado</span></td>
+                            <td>
+                                <a class="table-link"
+                                   asp-action="Index"
+                                   asp-route-id="@fila.IdAlquiler"
+                                   asp-route-estado="@Model.EstadoTab"
+                                   asp-route-q="@Model.Q"
+                                   asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+                                   asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">Ver</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="pagination-bar">
+        <span>
+            @Model.TotalFiltrado @(Model.TotalFiltrado == 1 ? "contrato encontrado" : "contratos encontrados") ·
+            Importes de demostración
+        </span>
+        <span class="pager">
+            <a class="page-btn @(Model.Page <= 1 ? "disabled" : "")"
+               asp-action="Index"
+               asp-route-page="@(Model.Page - 1)"
+               asp-route-id="@Model.Seleccionado?.IdAlquiler"
+               asp-route-estado="@Model.EstadoTab"
+               asp-route-q="@Model.Q"
+               asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+               asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")"
+               aria-label="Página anterior">
+                <span class="icon icon-chevron-left icon-xs"></span>
+            </a>
+            <span class="page-btn active">@Model.Page</span>
+            <span class="page-btn disabled">de @Model.TotalPages</span>
+            <a class="page-btn @(Model.Page >= Model.TotalPages ? "disabled" : "")"
+               asp-action="Index"
+               asp-route-page="@(Model.Page + 1)"
+               asp-route-id="@Model.Seleccionado?.IdAlquiler"
+               asp-route-estado="@Model.EstadoTab"
+               asp-route-q="@Model.Q"
+               asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+               asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")"
+               aria-label="Página siguiente">
+                <span class="icon icon-chevron-right icon-xs"></span>
+            </a>
+        </span>
+    </div>
+</section>
+
+@if (Model.Seleccionado is not null)
+{
+    <div class="rental-detail-grid">
+        <section class="panel rental-selected">
+            <div class="rental-selected-head">
+                <div>
+                    <p class="eyebrow">Contrato seleccionado · @Model.Seleccionado.Contrato</p>
+                    <div class="client-title-row">
+                        <h2 class="client-name-lg">@Model.Seleccionado.Cliente</h2>
+                        <span class="pill @Model.Seleccionado.PillClass">@Model.Seleccionado.Estado</span>
+                    </div>
+                    <p class="client-since">
+                        DNI @Model.Seleccionado.Dni
+                        @if (!string.IsNullOrWhiteSpace(Model.Seleccionado.Telefono))
+                        {
+                            <span> · @Model.Seleccionado.Telefono</span>
+                        }
+                    </p>
+                </div>
+                <div class="head-actions">
+                    <a class="btn btn-primary" asp-action="ContratoDigital" asp-route-id="@Model.Seleccionado.IdAlquiler">
+                        <span class="icon icon-file-text"></span>Ver contrato digital
+                    </a>
+                    @if (!Model.Seleccionado.Cerrado)
+                    {
+                        <a class="btn btn-secondary"
+                           asp-controller="Home"
+                           asp-action="Pendiente"
+                           asp-route-modulo="Devoluciones"
+                           asp-route-clave="devoluciones"
+                           asp-route-contrato="@Model.Seleccionado.IdAlquiler">
+                            <span class="icon icon-package-check"></span>Registrar devolución
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <div class="rental-selected-facts">
+                <div>
+                    <span class="client-field-label">Prendas</span>
+                    <strong>@Model.Seleccionado.CantidadPrendas @(Model.Seleccionado.CantidadPrendas == 1 ? "unidad" : "unidades")</strong>
+                    <span class="cell-sub">@Model.Seleccionado.PrendasResumen</span>
+                </div>
+                <div>
+                    <span class="client-field-label">Salida</span>
+                    <strong>@FechaHoraCorta(Model.Seleccionado.FechaSalida)</strong>
+                </div>
+                <div>
+                    <span class="client-field-label">Retorno pactado</span>
+                    <strong>@FechaHoraCorta(Model.Seleccionado.FechaRetorno)</strong>
+                </div>
+                <div>
+                    <span class="client-field-label">Total recibido</span>
+                    <strong>@Moneda(Model.Seleccionado.MontoTotal)</strong>
+                    <span class="cell-sub">Alquiler @Moneda(Model.Seleccionado.Subtotal) · Garantía @Moneda(Model.Seleccionado.Garantia)</span>
+                </div>
+            </div>
+
+            <div class="rental-selected-guarantee">
+                <span class="icon icon-shield"></span>
+                <div>
+                    <strong>Garantía en custodia · @Moneda(Model.Seleccionado.Garantia)</strong>
+                    <p>Se reembolsa tras la inspección y liquidación final. La mora se calcula al registrar el retorno real.</p>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Seleccionado.Observaciones))
+            {
+                <p class="rental-selected-note">
+                    <strong>Entrega:</strong> @Model.Seleccionado.Observaciones
+                </p>
+            }
+        </section>
+
+        <aside class="panel rental-reading">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Lectura de estados</h2>
+                    <p class="panel-sub">Cómo interpretar el tablero</p>
+                </div>
+            </div>
+            <div class="reading-row">
+                <span class="pill pill-vigente">Vigente</span>
+                <p>Contrato abierto dentro del plazo de devolución pactado.</p>
+            </div>
+            <div class="reading-row">
+                <span class="pill pill-vencido">Vencido</span>
+                <p>El retorno ya pasó y la mora diaria sigue acumulándose.</p>
+            </div>
+            <div class="reading-row">
+                <span class="pill pill-completado">Devuelto</span>
+                <p>La devolución fue registrada y el contrato quedó cerrado.</p>
+            </div>
+            <p class="reading-note">
+                “Pendientes de devolución” incluye todos los contratos abiertos: vigentes y vencidos.
+                La mora se liquida con la fecha y hora reales de recepción.
+            </p>
+        </aside>
+    </div>
+}

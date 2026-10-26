@@ -1,0 +1,32 @@
+@using AlquilerVestimentasLucy.Data
+@model ClienteFormViewModel
+@{
+    ViewData["Title"] = "Editar cliente";
+    ViewData["ActiveNav"] = "clientes";
+}
+
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index" asp-route-id="@Model.IdCliente">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a clientes
+        </a>
+        <h1 class="page-title">Editar ficha del cliente</h1>
+        <p class="page-sub">
+            Actualiza los datos de contacto y el consentimiento. El historial de alquileres se conserva.
+        </p>
+    </div>
+</div>
+
+<partial name="_FormularioCliente" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

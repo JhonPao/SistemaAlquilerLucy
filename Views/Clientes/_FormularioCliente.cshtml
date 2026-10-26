@@ -1,0 +1,117 @@
+@using AlquilerVestimentasLucy.Data
+@model ClienteFormViewModel
+@{
+    var esEdicion = Model.IdCliente > 0;
+    var esAdministradora = User.IsInRole(DbInitializer.RolAdministradora);
+}
+
+<form class="panel form-panel" method="post"
+      asp-action="@(esEdicion ? "Edit" : "Create")"
+      asp-route-id="@(esEdicion ? Model.IdCliente : (int?)null)">
+    <div asp-validation-summary="ModelOnly" class="notice notice-danger" role="alert"></div>
+
+    <div class="form-grid">
+        <div class="field">
+            <label asp-for="Dni"></label>
+            <input asp-for="Dni" class="input" inputmode="numeric" maxlength="8"
+                   placeholder="45876231" autocomplete="off" />
+            <span asp-validation-for="Dni" class="field-error"></span>
+            <span class="field-hint">8 dígitos, sin espacios ni guiones.</span>
+        </div>
+
+        <div class="field">
+            <label asp-for="Telefono"></label>
+            <input asp-for="Telefono" class="input" type="tel" maxlength="20"
+                   placeholder="987 654 321" autocomplete="off" />
+            <span asp-validation-for="Telefono" class="field-error"></span>
+            <span class="field-hint">Se usa para coordinar la entrega y el retorno.</span>
+        </div>
+
+        <div class="field">
+            <label asp-for="Nombres"></label>
+            <input asp-for="Nombres" class="input" placeholder="Lucía" autocomplete="off" />
+            <span asp-validation-for="Nombres" class="field-error"></span>
+        </div>
+
+        <div class="field">
+            <label asp-for="Apellidos"></label>
+            <input asp-for="Apellidos" class="input" placeholder="Quispe Huamán" autocomplete="off" />
+            <span asp-validation-for="Apellidos" class="field-error"></span>
+        </div>
+
+        <div class="field span-2">
+            <label asp-for="Direccion"></label>
+            <input asp-for="Direccion" class="input" placeholder="Av. Los Álamos 245, Surco" autocomplete="off" />
+            <span asp-validation-for="Direccion" class="field-error"></span>
+            <span class="field-hint">Opcional. Ayuda a ubicar al cliente para la entrega.</span>
+        </div>
+
+        <div class="field span-2">
+            <label class="consent-option">
+                <input asp-for="ConsentimientoDatos" type="checkbox" />
+                <span>
+                    <strong>Autorizo el tratamiento de mis datos personales.</strong>
+                    Acepto que LucyVest registre mi DNI, teléfono y dirección para la gestión del
+                    alquiler, la devolución y el contacto relacionado, conforme a la Ley N° 29733.
+                </span>
+            </label>
+            <span asp-validation-for="ConsentimientoDatos" class="field-error"></span>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <a class="btn btn-secondary" asp-action="Index" asp-route-id="@(esEdicion ? Model.IdCliente : (int?)null)">
+            Cancelar
+        </a>
+        <button class="btn btn-primary" type="submit">
+            <span class="icon icon-save"></span>@(esEdicion ? "Guardar cambios" : "Guardar cliente")
+        </button>
+    </div>
+</form>
+
+@if (esEdicion && esAdministradora)
+{
+    <section class="panel form-panel" style="margin-top:16px">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Estado del cliente</h2>
+                <p class="panel-sub">La baja lógica conserva el historial y los contratos.</p>
+            </div>
+            <span class="pill @(Model.Activo ? "pill-completado" : "pill-neutral")">
+                @(Model.Activo ? "Activo" : "Inactivo")
+            </span>
+        </div>
+
+        @if (Model.Activo)
+        {
+            @if (Model.TieneContratosActivos)
+            {
+                <div class="notice notice-warning" style="margin-bottom:14px">
+                    <span class="icon icon-alert"></span>
+                    <span>
+                        No se puede dar de baja mientras el cliente tenga contratos activos.
+                        Primero deben registrarse las devoluciones correspondientes.
+                    </span>
+                </div>
+            }
+
+            <form method="post" asp-action="DarDeBaja" asp-route-id="@Model.IdCliente"
+                  onsubmit="return confirm('¿Dar de baja a este cliente? Su historial se conservará.');">
+                <button class="btn btn-danger" type="submit" disabled="@Model.TieneContratosActivos">
+                    <span class="icon icon-x"></span>Dar de baja
+                </button>
+            </form>
+        }
+        else
+        {
+            <p class="field-hint" style="margin-bottom:14px">
+                El cliente no aparecerá como disponible para nuevos alquileres hasta reactivarlo.
+            </p>
+            <form method="post" asp-action="Reactivar" asp-route-id="@Model.IdCliente">
+                <button class="btn btn-secondary" type="submit">
+                    <span class="icon icon-circle-check"></span>Reactivar cliente
+                </button>
+            </form>
+        }
+    </section>
+}

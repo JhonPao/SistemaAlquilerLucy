@@ -1,0 +1,52 @@
+@model PrendaFormViewModel
+@{
+    var esEdicion = Model.IdPrenda > 0;
+    ViewData["Title"] = esEdicion ? "Editar prenda" : "Registrar prenda";
+    ViewData["ActiveNav"] = "prendas";
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver al inventario
+        </a>
+        <h1 class="page-title">@(esEdicion ? "Editar ficha de la prenda" : "Registrar una prenda")</h1>
+        <p class="page-sub">
+            @(esEdicion
+                ? "Actualiza los datos comerciales. El estado operativo se controla automáticamente."
+                : "El código único representa una unidad física y no podrá repetirse en el inventario.")
+        </p>
+    </div>
+</div>
+
+<form class="panel form-panel" method="post"
+      asp-action="@(esEdicion ? "Edit" : "Create")"
+      asp-route-id="@(esEdicion ? Model.IdPrenda : (int?)null)">
+    <div asp-validation-summary="ModelOnly" class="notice notice-danger" role="alert"></div>
+
+    <partial name="_FormularioPrenda" model="Model" />
+
+    @if (esEdicion)
+    {
+        <div class="notice notice-info" style="margin-top:4px">
+            <span class="icon icon-info"></span>
+            <span>
+                Estado actual: <strong>@Model.Estado.Etiqueta()</strong>.
+                Los cambios de estado se producen al registrar alquileres, devoluciones o mantenimiento.
+            </span>
+        </div>
+    }
+
+    <div class="form-actions">
+        <a class="btn btn-secondary" asp-action="@(esEdicion ? "Details" : "Index")" asp-route-id="@(esEdicion ? Model.IdPrenda : (int?)null)">
+            Cancelar
+        </a>
+        <button class="btn btn-primary" type="submit">
+            <span class="icon icon-save"></span>@(esEdicion ? "Guardar cambios" : "Guardar prenda")
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

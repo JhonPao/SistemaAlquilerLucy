@@ -1,0 +1,40 @@
+@model PrendaFormViewModel
+@{
+    ViewData["Title"] = "Editar prenda";
+    ViewData["ActiveNav"] = "prendas";
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Details" asp-route-id="@Model.IdPrenda">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a la ficha
+        </a>
+        <h1 class="page-title">Editar ficha de la prenda</h1>
+        <p class="page-sub">Actualiza los datos comerciales. El estado operativo se controla automáticamente.</p>
+    </div>
+</div>
+
+<form class="panel form-panel" method="post" asp-action="Edit" asp-route-id="@Model.IdPrenda">
+    <div asp-validation-summary="ModelOnly" class="notice notice-danger" role="alert"></div>
+
+    <partial name="_FormularioPrenda" model="Model" />
+
+    <div class="notice notice-info" style="margin-top:4px">
+        <span class="icon icon-info"></span>
+        <span>
+            Estado actual: <strong>@Model.Estado.Etiqueta()</strong>.
+            Los cambios de estado se producen al registrar alquileres, devoluciones o mantenimiento.
+        </span>
+    </div>
+
+    <div class="form-actions">
+        <a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.IdPrenda">Cancelar</a>
+        <button class="btn btn-primary" type="submit">
+            <span class="icon icon-save"></span>Guardar cambios
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

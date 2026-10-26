@@ -1,0 +1,163 @@
+@using System.Globalization
+@model Prenda
+@{
+    ViewData["Title"] = "Ficha de prenda";
+    ViewData["ActiveNav"] = "prendas";
+    var clienteActual = ViewData["ClienteActual"] as string;
+    var mantenimientos = Model.Mantenimientos.OrderByDescending(m => m.FechaIngreso).ToList();
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver al inventario
+        </a>
+        <h1 class="page-title">@Model.Nombre</h1>
+        <p class="page-sub">@Model.CodigoUnico · @Model.Categoria · Talla @Model.Talla</p>
+    </div>
+
+    @if (User.IsInRole("Administradora"))
+    {
+        <div class="head-actions">
+            <a class="btn btn-secondary" asp-action="Edit" asp-route-id="@Model.IdPrenda">
+                <span class="icon icon-settings"></span>Editar ficha
+            </a>
+
+            @if (Model.Estado == EstadoPrenda.DeBaja)
+            {
+                <form asp-action="Reactivar" asp-route-id="@Model.IdPrenda" method="post"
+                      onsubmit="return confirm('¿Reactivar esta prenda y volver a ponerla disponible?');">
+                    <button class="btn btn-primary" type="submit">
+                        <span class="icon icon-circle-check"></span>Reactivar
+                    </button>
+                </form>
+            }
+            else if (Model.Estado == EstadoPrenda.Disponible)
+            {
+                <form asp-action="DarDeBaja" asp-route-id="@Model.IdPrenda" method="post"
+                      onsubmit="return confirm('¿Dar de baja esta prenda? Conservará todo su historial.');">
+                    <button class="btn btn-danger" type="submit">
+                        <span class="icon icon-alert"></span>Dar de baja
+                    </button>
+                </form>
+            }
+        </div>
+    }
+</div>
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Ficha de la prenda</h2>
+            <p class="panel-sub">Trazabilidad física por código único</p>
+        </div>
+        <span class="pill @Model.Estado.ClasePill()">@Model.Estado.Etiqueta()</span>
+    </div>
+
+    <dl class="detail-grid">
+        <div class="detail-item">
+            <dt>Código único</dt>
+            <dd>@Model.CodigoUnico</dd>
+        </div>
+        <div class="detail-item">
+            <dt>Categoría</dt>
+            <dd>@Model.Categoria</dd>
+        </div>
+        <div class="detail-item">
+            <dt>Talla</dt>
+            <dd>@Model.Talla</dd>
+        </div>
+        <div class="detail-item">
+            <dt>Precio de alquiler</dt>
+            <dd class="money">S/ @Model.PrecioAlquiler.ToString("0.00", CultureInfo.InvariantCulture)</dd>
+        </div>
+        <div class="detail-item">
+            <dt>Garantía</dt>
+            <dd class="money">S/ @Model.CostoGarantia.ToString("0.00", CultureInfo.InvariantCulture)</dd>
+        </div>
+        <div class="detail-item">
+            <dt>Fecha de registro</dt>
+            <dd>@Model.FechaRegistro.ToString("dd MMM yyyy", CultureInfo.InvariantCulture)</dd>
+        </div>
+        <div class="detail-item">
+            <dt>Cliente actual</dt>
+            <dd>@(string.IsNullOrWhiteSpace(clienteActual) ? "Sin alquiler activo" : clienteActual)</dd>
+        </div>
+        <div class="detail-item">
+            <dt>Órdenes de mantenimiento</dt>
+            <dd>@mantenimientos.Count @(mantenimientos.Count == 1 ? "registro" : "registros")</dd>
+        </div>
+        <div class="detail-item">
+            <dt>Disponibilidad</dt>
+            <dd>@(Model.Estado == EstadoPrenda.Disponible ? "Lista para alquilar" : "No disponible para nuevos alquileres")</dd>
+        </div>
+    </dl>
+</section>
+
+<section class="panel" style="margin-top:16px">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Historial de mantenimiento</h2>
+            <p class="panel-sub">Lavandería, costura y desinfección de esta unidad</p>
+        </div>
+    </div>
+
+    @if (mantenimientos.Count == 0)
+    {
+        <div class="empty">Esta prenda todavía no tiene órdenes de mantenimiento registradas.</div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Ingreso</th>
+                        <th>Servicio</th>
+                        <th>Salida estimada</th>
+                        <th>Salida real</th>
+                        <th>Costo</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var orden in mantenimientos)
+                    {
+                        <tr>
+                            <td>@orden.FechaIngreso.ToString("dd MMM yyyy", CultureInfo.InvariantCulture)</td>
+                            <td>@orden.TipoServicio.Etiqueta()</td>
+                            <td class="muted">@orden.FechaSalidaEstimada.ToString("dd MMM yyyy", CultureInfo.InvariantCulture)</td>
+                            <td class="muted">@(orden.FechaSalidaReal?.ToString("dd MMM yyyy", CultureInfo.InvariantCulture) ?? "—")</td>
+                            <td>S/ @orden.CostoServicio.ToString("0.00", CultureInfo.InvariantCulture)</td>
+                            <td>
+                                @if (orden.EnCurso)
+                                {
+                                    <span class="pill pill-atencion">En curso</span>
+                                }
+                                else
+                                {
+                                    <span class="pill pill-completado">Finalizado</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

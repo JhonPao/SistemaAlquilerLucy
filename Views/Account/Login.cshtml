@@ -1,0 +1,103 @@
+@model AlquilerVestimentasLucy.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Iniciar sesión";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iniciar sesión · LucyVest Control</title>
+    <link rel="stylesheet" href="~/css/fonts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="auth-shell">
+        <section class="auth-editorial">
+            <div class="auth-editorial-bg"></div>
+            <div class="auth-editorial-veil"></div>
+
+            <div class="auth-brand">
+                <span class="brand-mark">lv</span>
+                <span>
+                    <span class="brand-name">LucyVest</span>
+                    <span class="brand-sub">CONTROL</span>
+                </span>
+            </div>
+
+            <div class="auth-promise">
+                <p class="auth-eyebrow">TRADICIÓN QUE SE CUIDA</p>
+                <h1 class="auth-headline">El arte de vestir.<br />La calma de tener<br />todo en orden.</h1>
+                <p class="auth-copy">Tu inventario, tus clientes y cada alquiler,<br />en un mismo lugar.</p>
+                <div class="auth-editorial-foot">
+                    <span>Hecho para tu taller</span>
+                    <span>Lima, Perú</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="auth-side">
+            <div class="auth-top">
+                <span>GESTIÓN DE ALQUILERES</span>
+                <span class="icon icon-shield" aria-hidden="true"></span>
+            </div>
+
+            <form class="auth-form" asp-controller="Account" asp-action="Login" method="post">
+                <div class="auth-welcome">
+                    <h2 class="auth-title">Bienvenida de nuevo</h2>
+                    <p class="auth-sub">Ingresa con tu cuenta del taller para continuar.</p>
+                </div>
+
+                <div asp-validation-summary="ModelOnly" class="notice notice-danger" role="alert"></div>
+
+                <input type="hidden" asp-for="ReturnUrl" />
+                <input type="hidden" asp-for="RememberMe" value="false" />
+
+                <div class="field">
+                    <label asp-for="Usuario"></label>
+                    <input asp-for="Usuario" class="input" placeholder="lucia.torres" autocomplete="username" autofocus />
+                    <span asp-validation-for="Usuario" class="field-error"></span>
+                    <span class="field-hint">Utiliza el usuario asignado por tu administradora.</span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Password"></label>
+                    <div class="input-group">
+                        <input asp-for="Password" class="input" placeholder="••••••••••••" autocomplete="current-password" />
+                        <button type="button" class="input-action" data-toggle-password="Password" aria-label="Mostrar contraseña">
+                            <span class="icon icon-eye-off"></span>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="field-error"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block auth-submit">
+                    Ingresar a LucyVest
+                    <span class="icon icon-arrow-right" aria-hidden="true"></span>
+                </button>
+
+                <p class="auth-help">¿No puedes ingresar? Contacta a la administradora de tu taller para restablecer tu acceso.</p>
+
+                <div class="auth-divider"></div>
+
+                <div class="auth-note">
+                    <span class="icon icon-lock" aria-hidden="true"></span>
+                    <span>Acceso autorizado para Administradora, Vendedor y Asistente. Tus permisos se aplican al iniciar sesión.</span>
+                </div>
+            </form>
+
+            <div class="auth-footer">
+                <span>LucyVest Control · Uso interno del taller</span>
+                <span>Protegemos tus datos según la Ley N° 29733.</span>
+            </div>
+        </section>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+</body>
+</html>

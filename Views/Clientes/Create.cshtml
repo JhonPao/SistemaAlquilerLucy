@@ -1,0 +1,32 @@
+@using AlquilerVestimentasLucy.Data
+@model ClienteFormViewModel
+@{
+    ViewData["Title"] = "Registrar cliente";
+    ViewData["ActiveNav"] = "clientes";
+}
+
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a clientes
+        </a>
+        <h1 class="page-title">Registrar un cliente</h1>
+        <p class="page-sub">
+            El DNI es único y el consentimiento informado es obligatorio para tratar los datos personales.
+        </p>
+    </div>
+</div>
+
+<partial name="_FormularioCliente" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

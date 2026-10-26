@@ -1,0 +1,59 @@
+@model PrendaFormViewModel
+@{
+    ViewData["Title"] = "Registrar prenda";
+}
+
+<div class="form-grid">
+    <div class="field">
+        <label asp-for="CodigoUnico"></label>
+        <input asp-for="CodigoUnico" class="input" placeholder="MN006" autocomplete="off" />
+        <span asp-validation-for="CodigoUnico" class="field-error"></span>
+        <span class="field-hint">Identifica una unidad física. Ejemplo: MN006 o TRA-CUS-001.</span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Nombre"></label>
+        <input asp-for="Nombre" class="input" placeholder="Vestido marinera marfil" autocomplete="off" />
+        <span asp-validation-for="Nombre" class="field-error"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Categoria"></label>
+        <input asp-for="Categoria" class="input" placeholder="Tradición peruana" list="categorias-sugeridas" autocomplete="off" />
+        <span asp-validation-for="Categoria" class="field-error"></span>
+        <datalist id="categorias-sugeridas">
+            <option value="Tradición peruana"></option>
+            <option value="Trajes y gala"></option>
+            <option value="Personajes"></option>
+        </datalist>
+    </div>
+
+    <div class="field">
+        <label asp-for="Talla"></label>
+        <input asp-for="Talla" class="input" placeholder="M" list="tallas-sugeridas" autocomplete="off" />
+        <span asp-validation-for="Talla" class="field-error"></span>
+        <datalist id="tallas-sugeridas">
+            <option value="XS"></option>
+            <option value="S"></option>
+            <option value="M"></option>
+            <option value="L"></option>
+            <option value="XL"></option>
+            <option value="XXL"></option>
+            <option value="Única"></option>
+        </datalist>
+    </div>
+
+    <div class="field">
+        <label asp-for="PrecioAlquiler"></label>
+        <input asp-for="PrecioAlquiler" class="input" type="number" step="0.01" min="0.01" placeholder="120.00" />
+        <span asp-validation-for="PrecioAlquiler" class="field-error"></span>
+        <span class="field-hint">Monto diario en soles (S/).</span>
+    </div>
+
+    <div class="field">
+        <label asp-for="CostoGarantia"></label>
+        <input asp-for="CostoGarantia" class="input" type="number" step="0.01" min="0" placeholder="150.00" />
+        <span asp-validation-for="CostoGarantia" class="field-error"></span>
+        <span class="field-hint">Garantía que se devuelve al cliente.</span>
+    </div>
+</div>

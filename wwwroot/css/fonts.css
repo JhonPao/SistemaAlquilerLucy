@@ -1,0 +1,24 @@
+/* Tipografías locales del sistema (Lora + Inter) */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../fonts/inter-var.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Lora';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('../fonts/lora-var.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Lora';
+    font-style: italic;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('../fonts/lora-italic-var.woff2') format('woff2');
+}

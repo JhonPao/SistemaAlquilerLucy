@@ -1,0 +1,310 @@
+@using AlquilerVestimentasLucy.Data
+@model ClientesIndexViewModel
+@{
+    ViewData["Title"] = "Clientes";
+    ViewData["ActiveNav"] = "clientes";
+    var puedeGestionar = User.IsInRole(DbInitializer.RolAdministradora)
+        || User.IsInRole(DbInitializer.RolVendedor);
+    var seleccionado = Model.Detalle;
+}
+
+@functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaLarga(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} {valor.Year}";
+
+    private static string FechaHora(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} · {valor:HH:mm}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Personas que vuelven</h1>
+        <p class="page-sub">
+            Consulta por DNI de 8 dígitos o teléfono y revisa el historial antes de un nuevo alquiler.
+        </p>
+    </div>
+    @if (puedeGestionar)
+    {
+        <a class="btn btn-primary" asp-action="Create">
+            <span class="icon icon-user-plus"></span>Registrar cliente
+        </a>
+    }
+</div>
+
+<div class="clients-layout">
+    <div class="clients-side">
+        <section class="panel client-panel">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Clientes</h2>
+                    <p class="panel-sub">
+                        @Model.TotalClientes @(Model.TotalClientes == 1 ? "cliente" : "clientes") en el entorno de ejemplo
+                    </p>
+                </div>
+            </div>
+
+            <form method="get" asp-action="Index" class="client-search">
+                <div class="search-field">
+                    <span class="icon icon-search icon-sm"></span>
+                    <input class="input"
+                           type="search"
+                           name="q"
+                           value="@Model.Q"
+                           placeholder="DNI o teléfono"
+                           aria-label="Buscar cliente por DNI, teléfono o nombre"
+                           autocomplete="off" />
+                </div>
+            </form>
+
+            @if (Model.Clientes.Count == 0)
+            {
+                <div class="empty">
+                    No encontramos clientes con ese criterio.
+                </div>
+            }
+            else
+            {
+                <div class="client-list">
+                    @foreach (var cliente in Model.Clientes)
+                    {
+                        <a class="client-item @(seleccionado?.IdCliente == cliente.IdCliente ? "selected" : "")"
+                           asp-action="Index"
+                           asp-route-id="@cliente.IdCliente"
+                           asp-route-q="@Model.Q">
+                            <span class="client-avatar" aria-hidden="true">@cliente.Iniciales</span>
+                            <span class="client-body">
+                                <span class="client-name">@cliente.NombreCompleto</span>
+                                <span class="client-meta">@cliente.Dni · @cliente.Telefono</span>
+                                <span class="client-status @cliente.ClaseResumen">@cliente.EstadoResumen</span>
+                            </span>
+                        </a>
+                    }
+                </div>
+            }
+
+            <div class="client-list-foot">
+                @Model.Clientes.Count @(Model.Clientes.Count == 1 ? "resultado" : "resultados") · DNI único por cliente
+            </div>
+        </section>
+
+        <div class="protected-note">
+            <span class="icon icon-shield icon-sm"></span>
+            <div>
+                <strong>Datos protegidos</strong>
+                <p>El DNI y el teléfono se usan solo para el contrato y la devolución. Ley N° 29733.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="clients-main">
+        @if (seleccionado is null)
+        {
+            <section class="panel client-empty">
+                <span class="icon icon-users icon-lg"></span>
+                <h2>@(Model.Q is null ? "Aún no hay clientes registrados" : "Sin coincidencias")</h2>
+                <p>
+                    @(Model.Q is null
+                        ? "Registra al primer cliente para comenzar a construir su historial de alquileres."
+                        : "Prueba con otro DNI, teléfono o nombre. También puedes registrar un cliente nuevo.")
+                </p>
+                @if (puedeGestionar)
+                {
+                    <a class="btn btn-primary" asp-action="Create">
+                        <span class="icon icon-user-plus"></span>Registrar cliente
+                    </a>
+                }
+            </section>
+        }
+        else
+        {
+            <section class="panel client-detail">
+                <div class="client-detail-head">
+                    <div>
+                        <div class="client-title-row">
+                            <h2 class="client-name-lg">@seleccionado.NombreCompleto</h2>
+                            @if (!seleccionado.Activo)
+                            {
+                                <span class="pill pill-neutral">Inactivo</span>
+                            }
+                        </div>
+                        <p class="client-since">Cliente desde el @FechaLarga(seleccionado.FechaRegistro)</p>
+                    </div>
+                    @if (puedeGestionar)
+                    {
+                        <a class="panel-link" asp-action="Edit" asp-route-id="@seleccionado.IdCliente">
+                            <span class="icon icon-edit icon-xs"></span>Editar ficha
+                        </a>
+                    }
+                </div>
+
+                <div class="client-fields">
+                    <div class="client-field">
+                        <span class="client-field-label">DNI · 8 dígitos</span>
+                        <span class="field-value">@seleccionado.Dni</span>
+                    </div>
+                    <div class="client-field">
+                        <span class="client-field-label">Teléfono</span>
+                        <span class="field-value">@seleccionado.Telefono</span>
+                    </div>
+                    <div class="client-field span-2">
+                        <span class="client-field-label">Dirección</span>
+                        <span class="field-value @(string.IsNullOrWhiteSpace(seleccionado.Direccion) ? "is-empty" : "")">
+                            @(string.IsNullOrWhiteSpace(seleccionado.Direccion) ? "No registrada" : seleccionado.Direccion)
+                        </span>
+                    </div>
+                </div>
+
+                <div class="client-stats">
+                    <div class="client-stat">
+                        <span class="client-stat-value">@seleccionado.ContratosTotal</span>
+                        <span class="client-stat-label">Alquileres registrados</span>
+                    </div>
+                    <div class="client-stat">
+                        <span class="client-stat-value">
+                            @seleccionado.DevolucionesPuntuales <span class="client-stat-of">de @seleccionado.DevolucionesTotal</span>
+                        </span>
+                        <span class="client-stat-label">Devoluciones puntuales</span>
+                    </div>
+                    <div class="client-stat">
+                        <span class="client-stat-value @(seleccionado.MoraActiva > 0 ? "is-warn" : "")">
+                            @seleccionado.MoraActiva
+                        </span>
+                        <span class="client-stat-label">Mora activa</span>
+                    </div>
+                </div>
+
+                <p class="punctuality-note">@seleccionado.NotaPuntualidad</p>
+            </section>
+
+            <section class="panel client-history">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Historial de alquileres</h2>
+                        <p class="panel-sub">Contratos y cumplimiento del retorno</p>
+                    </div>
+                </div>
+
+                @if (seleccionado.Historial.Count == 0)
+                {
+                    <div class="empty">Este cliente todavía no tiene contratos registrados.</div>
+                }
+                else
+                {
+                    <div class="table-scroll">
+                        <table class="data-table client-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Contrato</th>
+                                    <th>Prendas / importe</th>
+                                    <th>Retorno</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var contrato in seleccionado.Historial)
+                                {
+                                    <tr>
+                                        <td class="strong">@contrato.Contrato</td>
+                                        <td>
+                                            <span class="cell-title">@contrato.Prendas</span>
+                                            <span class="cell-sub">@Moneda(contrato.Importe)</span>
+                                        </td>
+                                        <td>
+                                            <span class="cell-title">@FechaHora(contrato.FechaRetorno)</span>
+                                            @if (contrato.Puntualidad is not null)
+                                            {
+                                                <span class="cell-sub @(contrato.Puntualidad == "A tiempo" ? "text-green" : "text-red")">
+                                                    @contrato.Puntualidad
+                                                </span>
+                                            }
+                                        </td>
+                                        <td><span class="pill @contrato.PillClass">@contrato.Estado</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (seleccionado.MoraActiva > 0 && seleccionado.MoraEstimada > 0)
+                    {
+                        <div class="mora-row">
+                            <span>Mora estimada a @FechaHora(seleccionado.FechaCorte)</span>
+                            <strong>@Moneda(seleccionado.MoraEstimada)</strong>
+                        </div>
+                        <p class="history-note">
+                            @seleccionado.DiasMora @(seleccionado.DiasMora == 1 ? "día" : "días") ×
+                            @Moneda(seleccionado.TarifaMora). Se liquida con la fecha y hora reales de devolución.
+                        </p>
+                    }
+                }
+            </section>
+
+            <section class="panel client-consent">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Consentimiento de datos personales</h2>
+                        <p class="panel-sub">Ley N° 29733 · Registro explícito</p>
+                    </div>
+                </div>
+
+                <div class="consent-check">
+                    <span class="consent-mark @(seleccionado.ConsentimientoDatos ? "" : "empty")" aria-hidden="true">
+                        @if (seleccionado.ConsentimientoDatos)
+                        {
+                            <span class="icon icon-check"></span>
+                        }
+                    </span>
+                    <span>
+                        Autorizo el tratamiento de mis datos personales (DNI, teléfono y dirección)
+                        para la gestión del alquiler, la devolución y el contacto relacionado.
+                    </span>
+                </div>
+
+                @if (!seleccionado.ConsentimientoDatos)
+                {
+                    <div class="notice notice-warning" style="margin-top:12px">
+                        <span class="icon icon-alert"></span>
+                        <span>El consentimiento está pendiente. Edita la ficha para regularizar el registro.</span>
+                    </div>
+                }
+
+                <div class="consent-rows">
+                    <div class="consent-row">
+                        <span>Otorgado por</span>
+                        <strong>@seleccionado.NombreCompleto</strong>
+                    </div>
+                    <div class="consent-row">
+                        <span>Registro de aceptación</span>
+                        <strong>@FechaHora(seleccionado.FechaRegistro)</strong>
+                    </div>
+                </div>
+
+                <p class="consent-legal">
+                    El consentimiento es obligatorio para registrar el DNI y el teléfono. El cliente puede
+                    solicitar la actualización o conservación de sus datos conforme a la Ley N° 29733.
+                </p>
+            </section>
+        }
+    </div>
+</div>

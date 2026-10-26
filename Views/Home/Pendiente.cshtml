@@ -1,0 +1,32 @@
+@{
+    var modulo = ViewData["Modulo"] as string ?? "Módulo";
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-title">@modulo</h1>
+        <p class="page-sub">Este módulo se habilitará en la siguiente fase del proyecto.</p>
+    </div>
+    <a class="btn btn-secondary" asp-controller="Home" asp-action="Index">
+        <span class="icon icon-chevron-right" style="transform:rotate(180deg)"></span>Volver al panel
+    </a>
+</div>
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">En construcción</h2>
+            <p class="panel-sub">La estructura visual y de datos ya está preparada.</p>
+        </div>
+        <span class="pill pill-atencion">Pendiente</span>
+    </div>
+    <p class="panel-sub" style="max-width:640px">
+        El acceso a <strong>@modulo</strong> quedará disponible cuando se implementen sus controladores,
+        vistas y reglas de negocio. Mientras tanto, puedes seguir trabajando en el inventario de prendas.
+    </p>
+    <div style="margin-top:20px">
+        <a class="btn btn-primary" asp-controller="Prendas" asp-action="Index">
+            <span class="icon icon-shirt"></span>Ir al inventario
+        </a>
+    </div>
+</section>

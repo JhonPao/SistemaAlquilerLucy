@@ -1,0 +1,190 @@
+@using System.Globalization
+@model PrendasIndexViewModel
+@{
+    ViewData["Title"] = "Inventario";
+    ViewData["ActiveNav"] = "prendas";
+}
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-title">El vestuario, al detalle</h1>
+        <p class="page-sub">Cada código corresponde a una unidad física. Consulta, registra y conserva su trazabilidad.</p>
+    </div>
+    @if (User.IsInRole("Administradora"))
+    {
+        <a class="btn btn-primary" asp-action="Create">
+            <span class="icon icon-plus"></span>Registrar prenda
+        </a>
+    }
+</div>
+
+<div class="category-grid">
+    @foreach (var categoria in Model.Categorias)
+    {
+        <a class="category-card" asp-action="Index" asp-route-categoria="@categoria.Nombre">
+            @if (!string.IsNullOrWhiteSpace(categoria.Imagen))
+            {
+                <img class="category-thumb" src="@categoria.Imagen" alt="" loading="lazy" />
+            }
+            else
+            {
+                <span class="category-thumb category-thumb-empty">
+                    <span class="icon icon-shirt icon-lg"></span>
+                </span>
+            }
+            <span class="category-body">
+                <span class="category-title">@categoria.Nombre</span>
+                <span class="category-desc">@categoria.Descripcion</span>
+                <span class="category-count">@categoria.Total @(categoria.Total == 1 ? "unidad registrada" : "unidades registradas")</span>
+            </span>
+        </a>
+    }
+</div>
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Inventario de prendas</h2>
+            <p class="panel-sub">@Model.TotalUnidades unidades · Las prendas De Baja conservan su historial</p>
+        </div>
+        <a class="panel-link" asp-action="Exportar"
+           asp-route-q="@Model.Q"
+           asp-route-estado="@Model.Estado"
+           asp-route-categoria="@Model.Categoria"
+           asp-route-talla="@Model.Talla">Exportar listado</a>
+    </div>
+
+    <nav class="tabs" aria-label="Filtrar por estado">
+        <a class="tab @(Model.Estado is null ? "active" : "")" asp-action="Index">
+            Todas <span>· @Model.TotalTodas</span>
+        </a>
+        <a class="tab @(Model.Estado == EstadoPrenda.Disponible ? "active" : "")" asp-action="Index" asp-route-estado="@EstadoPrenda.Disponible">
+            Disponible <span>· @Model.TotalDisponibles</span>
+        </a>
+        <a class="tab @(Model.Estado == EstadoPrenda.Alquilada ? "active" : "")" asp-action="Index" asp-route-estado="@EstadoPrenda.Alquilada">
+            Alquilada <span>· @Model.TotalAlquiladas</span>
+        </a>
+        <a class="tab @(Model.Estado == EstadoPrenda.EnMantenimiento ? "active" : "")" asp-action="Index" asp-route-estado="@EstadoPrenda.EnMantenimiento">
+            En Mantenimiento <span>· @Model.TotalMantenimiento</span>
+        </a>
+        <a class="tab @(Model.Estado == EstadoPrenda.DeBaja ? "active" : "")" asp-action="Index" asp-route-estado="@EstadoPrenda.DeBaja">
+            De Baja <span>· @Model.TotalBaja</span>
+        </a>
+    </nav>
+
+    <form method="get" asp-action="Index" class="filters">
+        <input type="hidden" name="estado" value="@Model.Estado" />
+
+        <div class="search-field">
+            <span class="icon icon-search" aria-hidden="true"></span>
+            <input class="input" type="search" name="q" value="@Model.Q"
+                   placeholder="Código, nombre o categoría" aria-label="Buscar prenda" />
+        </div>
+
+        <div class="select-wrap">
+            <select name="categoria" class="select" onchange="this.form.submit()" aria-label="Filtrar por categoría">
+                <option value="">Categoría: todas</option>
+                @foreach (var categoria in Model.CategoriasDisponibles)
+                {
+                    <option value="@categoria" selected="@(Model.Categoria == categoria)">@categoria</option>
+                }
+            </select>
+        </div>
+
+        <div class="select-wrap">
+            <select name="talla" class="select" onchange="this.form.submit()" aria-label="Filtrar por talla">
+                <option value="">Talla: todas</option>
+                @foreach (var talla in Model.Tallas)
+                {
+                    <option value="@talla" selected="@(Model.Talla == talla)">@talla</option>
+                }
+            </select>
+        </div>
+
+        <button type="submit" class="visually-hidden">Filtrar</button>
+    </form>
+
+    @if (Model.Prendas.Count == 0)
+    {
+        <div class="empty">
+            No se encontraron prendas con los filtros seleccionados.
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Código único</th>
+                        <th>Prenda / categoría</th>
+                        <th>Talla</th>
+                        <th>Alquiler</th>
+                        <th>Garantía</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var prenda in Model.Prendas)
+                    {
+                        <tr>
+                            <td class="strong">@prenda.CodigoUnico</td>
+                            <td>
+                                <span class="cell-title">@prenda.Nombre</span>
+                                <span class="cell-sub">@prenda.Categoria</span>
+                            </td>
+                            <td>@prenda.Talla</td>
+                            <td>S/ @prenda.PrecioAlquiler.ToString("0.00", CultureInfo.InvariantCulture)</td>
+                            <td>S/ @prenda.CostoGarantia.ToString("0.00", CultureInfo.InvariantCulture)</td>
+                            <td>
+                                <span class="pill @prenda.Estado.ClasePill()">@prenda.Estado.Etiqueta()</span>
+                            </td>
+                            <td>
+                                <a class="table-link" asp-action="Details" asp-route-id="@prenda.IdPrenda">Ver ficha</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="pagination-bar">
+        <span>Mostrando @Model.MostradosDesde–@Model.MostradosHasta de @Model.TotalFiltrado unidades · Orden: estado</span>
+        <div class="pager">
+            <a class="page-btn word @(Model.Page <= 1 ? "disabled" : "")"
+               asp-action="Index" asp-route-q="@Model.Q" asp-route-estado="@Model.Estado"
+               asp-route-categoria="@Model.Categoria" asp-route-talla="@Model.Talla"
+               asp-route-page="@(Model.Page - 1)">Anterior</a>
+
+            @for (var numero = 1; numero <= Model.TotalPages; numero++)
+            {
+                <a class="page-btn @(numero == Model.Page ? "active" : "")"
+                   asp-action="Index" asp-route-q="@Model.Q" asp-route-estado="@Model.Estado"
+                   asp-route-categoria="@Model.Categoria" asp-route-talla="@Model.Talla"
+                   asp-route-page="@numero">@numero</a>
+            }
+
+            <a class="page-btn word @(Model.Page >= Model.TotalPages ? "disabled" : "")"
+               asp-action="Index" asp-route-q="@Model.Q" asp-route-estado="@Model.Estado"
+               asp-route-categoria="@Model.Categoria" asp-route-talla="@Model.Talla"
+               asp-route-page="@(Model.Page + 1)">Siguiente</a>
+        </div>
+    </div>
+</section>
