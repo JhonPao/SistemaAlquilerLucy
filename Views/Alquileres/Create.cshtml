@@ -1,0 +1,680 @@
+@model NuevoAlquilerViewModel
+@{
+    ViewData["Title"] = "Nuevo alquiler";
+    ViewData["ActiveNav"] = "alquileres";
+    var cliente = Model.Cliente;
+    var seleccionadas = Model.PrendasElegidas;
+}
+
+@functions {
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a alquileres
+        </a>
+        <h1 class="page-title">Un nuevo alquiler</h1>
+        <p class="page-sub">
+            Borrador · Selecciona al cliente, las unidades y el retorno pactado. La disponibilidad se valida al confirmar.
+        </p>
+    </div>
+    <a class="btn btn-secondary" asp-action="Index">Descartar borrador</a>
+</div>
+
+<div class="rental-stepper" aria-label="Pasos del nuevo alquiler">
+    <div class="rental-step active">
+        <span class="rental-step-number">1</span>
+        <span>Cliente</span>
+    </div>
+    <span class="rental-step-line"></span>
+    <div class="rental-step">
+        <span class="rental-step-number">2</span>
+        <span>Prendas y fechas</span>
+    </div>
+    <span class="rental-step-line"></span>
+    <div class="rental-step">
+        <span class="rental-step-number">3</span>
+        <span>Revisar y confirmar</span>
+    </div>
+</div>
+
+<form method="post" asp-action="Create" id="form-alquiler">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="notice notice-danger" style="margin-bottom:16px"></div>
+
+    <div class="rental-create-layout">
+        <div class="rental-create-main">
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Cliente</h2>
+                        <p class="panel-sub">Busca por DNI, teléfono o nombre. El consentimiento debe estar registrado.</p>
+                    </div>
+                    <a class="panel-link" asp-controller="Clientes" asp-action="Create" target="_blank">
+                        <span class="icon icon-user-plus icon-xs"></span>Registrar cliente
+                    </a>
+                </div>
+
+                <div class="client-picker" id="cliente-picker">
+                    <div class="search-field">
+                        <span class="icon icon-search icon-sm"></span>
+                        <input id="cliente-busqueda"
+                               class="input"
+                               type="search"
+                               value="@cliente?.Dni"
+                               placeholder="DNI, teléfono o nombre"
+                               aria-label="Buscar cliente por DNI, teléfono o nombre"
+                               autocomplete="off" />
+                    </div>
+                    <div id="cliente-resultados" class="client-results" hidden></div>
+                </div>
+
+                <input type="hidden" asp-for="IdCliente" />
+                <span asp-validation-for="IdCliente" class="field-error"></span>
+
+                <div id="cliente-vacio"
+                     class="client-selected-empty"
+                     style="@(cliente is not null ? "display:none" : "")">
+                    <span class="icon icon-users icon-lg"></span>
+                    <div>
+                        <strong>Busca a la persona que alquila</strong>
+                        <p>Selecciona un cliente activo para continuar. La ficha mostrará su DNI, contacto y estado de mora.</p>
+                    </div>
+                </div>
+
+                <div id="cliente-seleccionado"
+                     class="client-selected-card"
+                     style="@(cliente is null ? "display:none" : "")">
+                    <div class="client-selected-head">
+                        <div>
+                            <div class="client-title-row">
+                                <strong id="cliente-nombre">@cliente?.NombreCompleto</strong>
+                                <span id="cliente-estado" class="pill @(cliente?.AlDia == true ? "pill-completado" : "pill-vencido")">
+                                    @(cliente?.AlDia == true ? "Al día" : "Con mora")
+                                </span>
+                            </div>
+                            <p id="cliente-meta" class="client-meta">
+                                @if (cliente is not null)
+                                {
+                                    <text>DNI @cliente.Dni · @cliente.Telefono</text>
+                                }
+                            </p>
+                        </div>
+                        <button type="button" class="panel-link" id="cliente-cambiar">Cambiar</button>
+                    </div>
+
+                    <div class="client-selected-fields">
+                        <div>
+                            <span class="client-field-label">Dirección</span>
+                            <strong id="cliente-direccion">@(cliente?.Direccion ?? "No registrada")</strong>
+                        </div>
+                        <div>
+                            <span class="client-field-label">Cliente desde</span>
+                            <strong id="cliente-desde">
+                                @if (cliente is not null)
+                                {
+                                    @cliente.FechaRegistro.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)
+                                }
+                            </strong>
+                        </div>
+                    </div>
+
+                    <p id="cliente-consentimiento" class="consent-line @(cliente?.ConsentimientoDatos == false ? "text-red" : "")">
+                        @if (cliente is not null)
+                        {
+                            @(cliente.ConsentimientoDatos
+                                ? $"Consentimiento de tratamiento de datos registrado · Ley N° 29733 · {cliente.FechaRegistro:dd MMM yyyy}"
+                                : "Consentimiento de tratamiento de datos pendiente · no se puede emitir el contrato.")
+                        }
+                    </p>
+
+                    <div id="cliente-mora" class="notice notice-warning" style="@(cliente?.MoraActiva > 0 ? "" : "display:none")">
+                        <span class="icon icon-alert"></span>
+                        <span id="cliente-mora-texto">
+                            @if (cliente?.MoraActiva > 0)
+                            {
+                                <text>Este cliente tiene @cliente.MoraActiva @(cliente.MoraActiva == 1 ? "contrato vencido" : "contratos vencidos"). Revisa el estado antes de entregar nuevas prendas.</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Fechas y disponibilidad</h2>
+                        <p class="panel-sub">Las unidades se validan para todo el periodo antes de confirmar.</p>
+                    </div>
+                </div>
+
+                <div class="date-grid">
+                    <div class="field">
+                        <label asp-for="FechaAlquiler">Salida *</label>
+                        <input asp-for="FechaAlquiler" type="datetime-local" class="input" step="60"
+                               asp-format="{0:yyyy-MM-ddTHH:mm}" />
+                        <span asp-validation-for="FechaAlquiler" class="field-error"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="FechaDevolucionPactada">Retorno pactado *</label>
+                        <input asp-for="FechaDevolucionPactada" type="datetime-local" class="input" step="60"
+                               asp-format="{0:yyyy-MM-ddTHH:mm}" />
+                        <span asp-validation-for="FechaDevolucionPactada" class="field-error"></span>
+                    </div>
+                </div>
+
+                <div class="notice notice-success">
+                    <span class="icon icon-circle-check"></span>
+                    <span>
+                        Sin solapamientos en las unidades seleccionadas. Solo se pueden añadir prendas en estado
+                        <strong>Disponible</strong>. La disponibilidad se vuelve a validar al confirmar.
+                    </span>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Prendas del alquiler</h2>
+                        <p class="panel-sub">
+                            <span id="prendas-count">@seleccionadas.Count</span>
+                            <span id="prendas-count-label">@(seleccionadas.Count == 1 ? "unidad seleccionada" : "unidades seleccionadas")</span>
+                            · Una unidad física por código
+                        </p>
+                    </div>
+                    <span class="pill pill-completado">Disponible · @Model.Prendas.Count</span>
+                </div>
+
+                <div class="prenda-search-row">
+                    <div class="search-field">
+                        <span class="icon icon-search icon-sm"></span>
+                        <input id="prenda-busqueda"
+                               class="input"
+                               type="search"
+                               placeholder="Buscar código, prenda o talla"
+                               aria-label="Buscar prenda disponible" />
+                    </div>
+                    <span class="field-hint">El código identifica una unidad física.</span>
+                </div>
+
+                @if (Model.Prendas.Count == 0)
+                {
+                    <div class="empty">
+                        No hay prendas disponibles en este momento. Registra una devolución o espera la salida de mantenimiento.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-scroll">
+                        <table class="data-table prenda-picker-table">
+                            <thead>
+                                <tr>
+                                    <th class="center"></th>
+                                    <th>Código / prenda</th>
+                                    <th>Talla</th>
+                                    <th class="num">Alquiler</th>
+                                    <th class="num">Garantía</th>
+                                    <th class="num"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prenda in Model.Prendas)
+                                {
+                                    <tr class="prenda-pick-row @(prenda.Seleccionada ? "is-selected" : "")"
+                                        data-search="@($"{prenda.CodigoUnico} {prenda.Nombre} {prenda.Talla}")">
+                                        <td class="center">
+                                            <input class="prenda-check"
+                                                   id="prenda-@prenda.IdPrenda"
+                                                   type="checkbox"
+                                                   name="PrendasSeleccionadas"
+                                                   value="@prenda.IdPrenda"
+                                                   checked="@prenda.Seleccionada"
+                                                   data-codigo="@prenda.CodigoUnico"
+                                                   data-nombre="@prenda.Nombre"
+                                                   data-precio="@prenda.PrecioAlquiler.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                   data-garantia="@prenda.CostoGarantia.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                   aria-label="Seleccionar @prenda.CodigoUnico" />
+                                        </td>
+                                        <td>
+                                            <span class="cell-title">@prenda.CodigoUnico</span>
+                                            <span class="cell-sub">@prenda.Nombre</span>
+                                        </td>
+                                        <td>@prenda.Talla</td>
+                                        <td class="num">@Moneda(prenda.PrecioAlquiler)</td>
+                                        <td class="num">@Moneda(prenda.CostoGarantia)</td>
+                                        <td class="num">
+                                            <label for="prenda-@prenda.IdPrenda" class="table-link prenda-toggle">
+                                                @(prenda.Seleccionada ? "Quitar" : "Añadir")
+                                            </label>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="prenda-search-empty" class="empty" hidden>No hay prendas disponibles que coincidan con la búsqueda.</div>
+
+                    <button type="button" class="panel-link rental-add-link" id="prenda-focus">
+                        <span class="icon icon-plus icon-xs"></span>Añadir otra prenda disponible
+                    </button>
+                }
+
+                <span asp-validation-for="PrendasSeleccionadas" class="field-error"></span>
+
+                @if (Model.NoDisponibles.Count > 0)
+                {
+                    <div class="unavailable-note">
+                        <span class="icon icon-info icon-xs"></span>
+                        <p>
+                            <strong>No seleccionables:</strong>
+                            @string.Join(", ", Model.NoDisponibles.Select(p => $"{p.CodigoUnico} · {p.Nombre} · {p.Motivo}"))
+                        </p>
+                    </div>
+                }
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Observaciones de entrega</h2>
+                        <p class="panel-sub">Condición y accesorios</p>
+                    </div>
+                </div>
+                <div class="field" style="margin-bottom:0">
+                    <label asp-for="Observaciones">Condición y accesorios</label>
+                    <textarea asp-for="Observaciones"
+                              placeholder="Ej. Ambas unidades sin daños visibles. Incluye 2 fundas y perchero."></textarea>
+                    <span asp-validation-for="Observaciones" class="field-error"></span>
+                </div>
+            </section>
+        </div>
+
+        <aside class="rental-create-side">
+            <section class="panel summary-card">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Resumen de importes</h2>
+                        <p class="panel-sub">Borrador · No genera movimientos aún</p>
+                    </div>
+                </div>
+
+                <div id="resumen-lineas" class="summary-lines">
+                    @if (seleccionadas.Count == 0)
+                    {
+                        <div class="summary-empty">Selecciona una prenda para ver el resumen.</div>
+                    }
+                    else
+                    {
+                        @foreach (var prenda in seleccionadas)
+                        {
+                            <div class="summary-line">
+                                <span>@prenda.CodigoUnico · Alquiler</span>
+                                <strong>@Moneda(prenda.PrecioAlquiler)</strong>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="summary-block">
+                    <div class="summary-line total">
+                        <span>Importe de alquiler</span>
+                        <strong id="subtotal">@Moneda(Model.Subtotal)</strong>
+                    </div>
+                    <div class="summary-line">
+                        <span>Depósito de garantía</span>
+                        <strong id="garantia">@Moneda(Model.TotalGarantia)</strong>
+                    </div>
+                    <p id="garantia-nota" class="summary-note">
+                        @if (seleccionadas.Count == 0)
+                        {
+                            <text>La garantía se calcula por unidad y es reembolsable tras la liquidación.</text>
+                        }
+                        else
+                        {
+                            @($"{string.Join(" + ", seleccionadas.Select(p => $"{p.CodigoUnico}: {Moneda(p.CostoGarantia)}"))}. La garantía es reembolsable tras la liquidación.")
+                        }
+                    </p>
+                    <div class="summary-total">
+                        <span>Total a recibir</span>
+                        <strong id="total">@Moneda(Model.MontoTotal)</strong>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label asp-for="MedioPago">Medio de pago</label>
+                    <div class="select-wrap">
+                        <select asp-for="MedioPago" class="select">
+                            @foreach (var medio in NuevoAlquilerViewModel.MediosPago)
+                            {
+                                <option value="@medio">@medio</option>
+                            }
+                        </select>
+                    </div>
+                    <span asp-validation-for="MedioPago" class="field-error"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="ReferenciaPago">Referencia de pago</label>
+                    <input asp-for="ReferenciaPago" class="input" placeholder="BCP-000000-0000" />
+                    <span asp-validation-for="ReferenciaPago" class="field-error"></span>
+                </div>
+
+                <label class="confirm-check">
+                    <input asp-for="AceptaCondiciones" />
+                    <span>He verificado las prendas, la identidad del cliente y los importes de entrega.</span>
+                </label>
+                <span asp-validation-for="AceptaCondiciones" class="field-error"></span>
+
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top:16px">
+                    Confirmar y emitir contrato
+                </button>
+                <p id="bloqueo-nota" class="summary-note">
+                    @if (seleccionadas.Count == 0)
+                    {
+                        <text>Al confirmar, las prendas seleccionadas pasarán a Alquilada y quedarán bloqueadas para otras entregas.</text>
+                    }
+                    else
+                    {
+                        @($"Al confirmar, {string.Join(", ", seleccionadas.Select(p => p.CodigoUnico))} pasarán a Alquilada y quedarán bloqueadas para otras entregas.")
+                    }
+                </p>
+            </section>
+
+            <div class="protected-note">
+                <span class="icon icon-file-text icon-sm"></span>
+                <div>
+                    <strong>Contrato digital, cero papel</strong>
+                    <p>El documento incluirá partes, prendas, fechas y políticas vigentes. Podrás revisarlo y compartirlo con el cliente.</p>
+                </div>
+            </div>
+
+            <section class="panel policy-card">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Política aplicable</h2>
+                        <p class="panel-sub">Configurada por Administradora</p>
+                    </div>
+                </div>
+                <div class="policy-row">
+                    <span>Penalidad diaria por contrato</span>
+                    <strong>@Moneda(Model.TarifaMoraDiaria)</strong>
+                </div>
+                <div class="policy-row">
+                    <span>Costo base de reparación</span>
+                    <strong>@Moneda(Model.CostoBaseReparacion)</strong>
+                </div>
+                <p class="summary-note">
+                    Se cobra solo si existe retraso. Los daños se valoran según inspección y tarifario vigente.
+                </p>
+            </section>
+        </aside>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            var form = document.getElementById('form-alquiler');
+            if (!form) return;
+
+            var buscarUrl = '@Url.Action("BuscarClientes", "Alquileres")';
+            var clienteInput = document.getElementById('cliente-busqueda');
+            var resultados = document.getElementById('cliente-resultados');
+            var idCliente = document.getElementById('IdCliente');
+            var clienteVacio = document.getElementById('cliente-vacio');
+            var clienteCard = document.getElementById('cliente-seleccionado');
+            var clienteNombre = document.getElementById('cliente-nombre');
+            var clienteEstado = document.getElementById('cliente-estado');
+            var clienteMeta = document.getElementById('cliente-meta');
+            var clienteDireccion = document.getElementById('cliente-direccion');
+            var clienteDesde = document.getElementById('cliente-desde');
+            var clienteConsentimiento = document.getElementById('cliente-consentimiento');
+            var clienteMora = document.getElementById('cliente-mora');
+            var clienteMoraTexto = document.getElementById('cliente-mora-texto');
+            var cambiar = document.getElementById('cliente-cambiar');
+            var debounce;
+
+            function ocultarResultados() {
+                resultados.hidden = true;
+                resultados.innerHTML = '';
+            }
+
+            function mostrarCliente(c) {
+                idCliente.value = c.id;
+                clienteNombre.textContent = c.nombre;
+                clienteEstado.textContent = c.alDia ? 'Al día' : 'Con mora';
+                clienteEstado.className = 'pill ' + (c.alDia ? 'pill-completado' : 'pill-vencido');
+                clienteMeta.textContent = 'DNI ' + c.dni + ' · ' + c.telefono;
+                clienteDireccion.textContent = c.direccion;
+                clienteDesde.textContent = c.fechaConsentimiento;
+                clienteConsentimiento.textContent = c.consentimiento
+                    ? 'Consentimiento de tratamiento de datos registrado · Ley N° 29733 · ' + c.fechaConsentimiento
+                    : 'Consentimiento de tratamiento de datos pendiente · no se puede emitir el contrato.';
+                clienteConsentimiento.classList.toggle('text-red', !c.consentimiento);
+                clienteMora.hidden = c.moraActiva <= 0;
+                clienteMoraTexto.textContent = c.moraActiva > 0
+                    ? 'Este cliente tiene ' + c.moraActiva + ' ' + (c.moraActiva === 1 ? 'contrato vencido' : 'contratos vencidos') + '. Revisa el estado antes de entregar nuevas prendas.'
+                    : '';
+                clienteVacio.style.display = 'none';
+                clienteCard.style.display = '';
+                clienteInput.value = c.dni;
+                ocultarResultados();
+            }
+
+            function limpiarCliente() {
+                idCliente.value = 0;
+                clienteInput.value = '';
+                clienteVacio.style.display = '';
+                clienteCard.style.display = 'none';
+                ocultarResultados();
+                clienteInput.focus();
+            }
+
+            function mostrarMensaje(texto) {
+                resultados.innerHTML = '';
+                var vacio = document.createElement('div');
+                vacio.className = 'client-result-empty';
+                vacio.textContent = texto;
+                resultados.appendChild(vacio);
+                resultados.hidden = false;
+            }
+
+            function buscarClientes() {
+                var texto = clienteInput.value.trim();
+                fetch(buscarUrl + '?q=' + encodeURIComponent(texto), {
+                    headers: { 'Accept': 'application/json' }
+                })
+                    .then(function (respuesta) {
+                        if (!respuesta.ok) throw new Error('No se pudo buscar');
+                        return respuesta.json();
+                    })
+                    .then(function (clientes) {
+                        resultados.innerHTML = '';
+                        if (!clientes.length) {
+                            mostrarMensaje('Sin coincidencias. Revisa el DNI o registra un cliente nuevo.');
+                            return;
+                        }
+
+                        clientes.forEach(function (c) {
+                            var boton = document.createElement('button');
+                            boton.type = 'button';
+                            boton.className = 'client-result';
+
+                            var iniciales = document.createElement('span');
+                            iniciales.className = 'client-avatar';
+                            iniciales.textContent = c.iniciales;
+
+                            var cuerpo = document.createElement('span');
+                            cuerpo.className = 'client-result-body';
+                            var nombre = document.createElement('span');
+                            nombre.className = 'client-name';
+                            nombre.textContent = c.nombre;
+                            var meta = document.createElement('span');
+                            meta.className = 'client-meta';
+                            meta.textContent = 'DNI ' + c.dni + ' · ' + c.telefono;
+                            cuerpo.appendChild(nombre);
+                            cuerpo.appendChild(meta);
+
+                            var estado = document.createElement('span');
+                            estado.className = 'pill ' + (c.alDia ? 'pill-completado' : 'pill-vencido');
+                            estado.textContent = c.alDia ? 'Al día' : 'Con mora';
+
+                            boton.appendChild(iniciales);
+                            boton.appendChild(cuerpo);
+                            boton.appendChild(estado);
+                            boton.addEventListener('click', function () { mostrarCliente(c); });
+
+                            resultados.appendChild(boton);
+                        });
+                        resultados.hidden = false;
+                    })
+                    .catch(function () {
+                        mostrarMensaje('No se pudo consultar clientes. Intenta nuevamente.');
+                    });
+            }
+
+            clienteInput.addEventListener('input', function () {
+                clearTimeout(debounce);
+                debounce = setTimeout(buscarClientes, 220);
+            });
+
+            clienteInput.addEventListener('focus', function () {
+                if (!clienteCard.style.display || clienteCard.style.display === 'none') {
+                    buscarClientes();
+                }
+            });
+
+            cambiar.addEventListener('click', limpiarCliente);
+
+            document.addEventListener('click', function (evento) {
+                if (!document.getElementById('cliente-picker').contains(evento.target)) {
+                    ocultarResultados();
+                }
+            });
+
+            var checks = Array.prototype.slice.call(document.querySelectorAll('.prenda-check'));
+            var resumen = document.getElementById('resumen-lineas');
+            var prendasCount = document.getElementById('prendas-count');
+            var prendasCountLabel = document.getElementById('prendas-count-label');
+            var subtotal = document.getElementById('subtotal');
+            var garantia = document.getElementById('garantia');
+            var garantiaNota = document.getElementById('garantia-nota');
+            var total = document.getElementById('total');
+            var bloqueoNota = document.getElementById('bloqueo-nota');
+            var prendaBusqueda = document.getElementById('prenda-busqueda');
+            var prendaSearchEmpty = document.getElementById('prenda-search-empty');
+            var prendaFocus = document.getElementById('prenda-focus');
+
+            function moneda(valor) {
+                return 'S/ ' + valor.toFixed(2);
+            }
+
+            function normalizar(texto) {
+                return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            }
+
+            function actualizarResumen() {
+                var seleccionadas = checks
+                    .filter(function (check) { return check.checked; })
+                    .map(function (check) {
+                        return {
+                            codigo: check.dataset.codigo,
+                            precio: parseFloat(check.dataset.precio),
+                            garantia: parseFloat(check.dataset.garantia)
+                        };
+                    });
+
+                prendasCount.textContent = seleccionadas.length;
+                prendasCountLabel.textContent = seleccionadas.length === 1 ? 'unidad seleccionada' : 'unidades seleccionadas';
+
+                checks.forEach(function (check) {
+                    var fila = check.closest('tr');
+                    if (!fila) return;
+                    fila.classList.toggle('is-selected', check.checked);
+                    var etiqueta = fila.querySelector('.prenda-toggle');
+                    if (etiqueta) etiqueta.textContent = check.checked ? 'Quitar' : 'Añadir';
+                });
+
+                resumen.innerHTML = '';
+                var sumaAlquiler = 0;
+                var sumaGarantia = 0;
+
+                if (seleccionadas.length === 0) {
+                    var vacio = document.createElement('div');
+                    vacio.className = 'summary-empty';
+                    vacio.textContent = 'Selecciona una prenda para ver el resumen.';
+                    resumen.appendChild(vacio);
+                    garantiaNota.textContent = 'La garantía se calcula por unidad y es reembolsable tras la liquidación.';
+                    bloqueoNota.textContent = 'Al confirmar, las prendas seleccionadas pasarán a Alquilada y quedarán bloqueadas para otras entregas.';
+                } else {
+                    seleccionadas.forEach(function (prenda) {
+                        sumaAlquiler += prenda.precio;
+                        sumaGarantia += prenda.garantia;
+
+                        var linea = document.createElement('div');
+                        linea.className = 'summary-line';
+                        var nombre = document.createElement('span');
+                        nombre.textContent = prenda.codigo + ' · Alquiler';
+                        var valor = document.createElement('strong');
+                        valor.textContent = moneda(prenda.precio);
+                        linea.appendChild(nombre);
+                        linea.appendChild(valor);
+                        resumen.appendChild(linea);
+                    });
+
+                    garantiaNota.textContent = seleccionadas
+                        .map(function (prenda) { return prenda.codigo + ': ' + moneda(prenda.garantia); })
+                        .join(' + ') + '. La garantía es reembolsable tras la liquidación.';
+                    bloqueoNota.textContent = 'Al confirmar, ' +
+                        seleccionadas.map(function (prenda) { return prenda.codigo; }).join(', ') +
+                        ' pasarán a Alquilada y quedarán bloqueadas para otras entregas.';
+                }
+
+                subtotal.textContent = moneda(sumaAlquiler);
+                garantia.textContent = moneda(sumaGarantia);
+                total.textContent = moneda(sumaAlquiler + sumaGarantia);
+            }
+
+            checks.forEach(function (check) {
+                check.addEventListener('change', actualizarResumen);
+            });
+
+            if (prendaBusqueda) {
+                prendaBusqueda.addEventListener('input', function () {
+                    var termino = normalizar(prendaBusqueda.value.trim());
+                    var visibles = 0;
+                    document.querySelectorAll('.prenda-pick-row').forEach(function (fila) {
+                        var coincide = !termino || normalizar(fila.dataset.search || '').indexOf(termino) >= 0;
+                        fila.hidden = !coincide;
+                        if (coincide) visibles += 1;
+                    });
+                    if (prendaSearchEmpty) prendaSearchEmpty.hidden = visibles > 0;
+                });
+            }
+
+            if (prendaFocus) {
+                prendaFocus.addEventListener('click', function () {
+                    if (prendaBusqueda) {
+                        prendaBusqueda.focus();
+                        prendaBusqueda.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+            }
+
+            actualizarResumen();
+        })();
+    </script>
+}

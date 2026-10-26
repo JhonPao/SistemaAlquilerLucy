@@ -568,6 +568,16 @@ public class AlquileresController : Controller
 
     private async Task CargarDatosFormularioAsync(NuevoAlquilerViewModel modelo)
     {
+        var politica = await _db.ConfiguracionesPolitica
+            .AsNoTracking()
+            .OrderBy(p => p.IdConfiguracion)
+            .FirstOrDefaultAsync();
+
+        modelo.TarifaMoraDiaria = politica?.TarifaMoraDiaria ?? 0m;
+        modelo.CostoBaseReparacion = politica?.CostoBaseReparacion ?? 0m;
+        modelo.PorcentajeDanioLeve = politica?.PorcentajeDanioLeve ?? 0m;
+        modelo.PorcentajeDanioGrave = politica?.PorcentajeDanioGrave ?? 0m;
+
         if (modelo.IdCliente > 0)
         {
             var cliente = await _db.Clientes

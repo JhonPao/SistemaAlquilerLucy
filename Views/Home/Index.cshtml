@@ -14,7 +14,7 @@
         <h1 class="page-title">Un día en orden, @Model.Nombre</h1>
         <p class="page-sub">@fechaHoy · Revisa lo que necesita atención en el taller.</p>
     </div>
-    <a class="btn btn-primary" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Nuevo alquiler" asp-route-clave="alquileres">
+    <a class="btn btn-primary" asp-controller="Alquileres" asp-action="Create">
         <span class="icon icon-plus"></span>Nuevo alquiler
     </a>
 </div>
@@ -49,7 +49,7 @@
                 <h2 class="panel-title">Próximas devoluciones</h2>
                 <p class="panel-sub">Ordenadas por fecha pactada de retorno</p>
             </div>
-            <a class="panel-link" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Alquileres" asp-route-clave="alquileres">Ver alquileres</a>
+            <a class="panel-link" asp-controller="Alquileres" asp-action="Index">Ver alquileres</a>
         </div>
 
         @if (Model.ProximasDevoluciones.Count == 0)
@@ -71,7 +71,7 @@
                     @foreach (var item in Model.ProximasDevoluciones)
                     {
                         <tr>
-                            <td><span class="strong">@item.Contrato</span> · @item.Cliente</td>
+                            <td><a class="strong table-link" asp-controller="Alquileres" asp-action="ContratoDigital" asp-route-id="@item.IdAlquiler">@item.Contrato</a> · @item.Cliente</td>
                             <td class="muted">@item.FechaPactada.ToString("dd MMM · HH:mm", CultureInfo.InvariantCulture)</td>
                             <td class="center">@item.CantidadPrendas</td>
                             <td>

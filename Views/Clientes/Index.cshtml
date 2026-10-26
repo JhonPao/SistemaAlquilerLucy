@@ -225,7 +225,12 @@
                                 @foreach (var contrato in seleccionado.Historial)
                                 {
                                     <tr>
-                                        <td class="strong">@contrato.Contrato</td>
+                                        <td>
+                                            <a class="strong table-link"
+                                               asp-controller="Alquileres"
+                                               asp-action="ContratoDigital"
+                                               asp-route-id="@contrato.IdAlquiler">@contrato.Contrato</a>
+                                        </td>
                                         <td>
                                             <span class="cell-title">@contrato.Prendas</span>
                                             <span class="cell-sub">@Moneda(contrato.Importe)</span>

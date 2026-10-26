@@ -79,6 +79,11 @@ public class NuevoAlquilerViewModel
     [Display(Name = "Verificación de entrega")]
     public bool AceptaCondiciones { get; set; }
 
+    public decimal TarifaMoraDiaria { get; set; }
+    public decimal CostoBaseReparacion { get; set; }
+    public decimal PorcentajeDanioLeve { get; set; }
+    public decimal PorcentajeDanioGrave { get; set; }
+
     public List<PrendaAlquilerViewModel> PrendasElegidas =>
         Prendas.Where(p => p.Seleccionada).OrderBy(p => p.CodigoUnico).ToList();
 

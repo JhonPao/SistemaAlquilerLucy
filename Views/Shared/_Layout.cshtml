@@ -54,7 +54,7 @@
                 <a class="nav-item @(activo == "clientes" ? "active" : "")" asp-controller="Clientes" asp-action="Index">
                     <span class="icon icon-users"></span>Clientes
                 </a>
-                <a class="nav-item @(activo == "alquileres" ? "active" : "")" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Alquileres" asp-route-clave="alquileres">
+                <a class="nav-item @(activo == "alquileres" ? "active" : "")" asp-controller="Alquileres" asp-action="Index">
                     <span class="icon icon-file-text"></span>Alquileres
                 </a>
                 <a class="nav-item @(activo == "devoluciones" ? "active" : "")" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Devoluciones" asp-route-clave="devoluciones">

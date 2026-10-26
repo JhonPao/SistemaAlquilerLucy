@@ -1,0 +1,373 @@
+@model ContratoDigitalViewModel
+@{
+    ViewData["Title"] = $"Contrato {Model.Codigo}";
+    ViewData["ActiveNav"] = "alquileres";
+}
+
+@functions {
+    private static readonly string[] MesesLargos =
+        ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+         "julio", "agosto", "setiembre", "octubre", "noviembre", "diciembre"];
+
+    private static readonly string[] MesesCortos =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaLarga(DateTime valor) =>
+        $"{valor.Day} de {MesesLargos[valor.Month - 1]} de {valor.Year}";
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {MesesCortos[valor.Month - 1]} {valor.Year}";
+
+    private static string FechaHora(DateTime valor) =>
+        $"{FechaCorta(valor)} · {valor:HH:mm}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+
+    private static string Porcentaje(decimal valor) =>
+        $"{(valor * 100m).ToString("0", System.Globalization.CultureInfo.InvariantCulture)}%";
+
+    private static string UltimosDigitos(string? telefono) =>
+        string.IsNullOrWhiteSpace(telefono)
+            ? "sin teléfono registrado"
+            : $"teléfono terminado en {telefono[^3..]}";
+}
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+
+<div class="page-head contract-page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a alquileres
+        </a>
+        <h1 class="page-title">Contrato digital · @Model.Codigo</h1>
+        <p class="page-sub">
+            Documento emitido el @FechaLarga(Model.FechaEmision) a las @Model.FechaEmision.ToString("HH:mm") · Copia íntegra
+        </p>
+    </div>
+    <div class="head-actions contract-actions">
+        <button type="button" class="btn btn-secondary" data-print>
+            <span class="icon icon-download"></span>Descargar PDF
+        </button>
+        <button type="button" class="btn btn-primary" data-share>
+            <span class="icon icon-share"></span><span id="share-label">Compartir copia</span>
+        </button>
+    </div>
+</div>
+
+<div class="contract-layout">
+    <article class="contract-paper" id="contrato-digital">
+        <header class="contract-brand">
+            <div class="contract-brand-identity">
+                <span class="contract-brand-mark">lv</span>
+                <span>
+                    <span class="contract-brand-name">LucyVest</span>
+                    <span class="contract-brand-sub">CONTROL · ALQUILER DE VESTUARIO</span>
+                </span>
+            </div>
+            <span class="pill pill-neutral">Copia digital</span>
+        </header>
+
+        <h2 class="contract-title">Contrato de alquiler de prendas</h2>
+        <p class="contract-meta">N° @Model.Codigo · Lima, @FechaLarga(Model.FechaEmision)</p>
+
+        <section class="contract-parties">
+            <div class="contract-block">
+                <span class="contract-label">Arrendadora</span>
+                <strong>@Model.EmisorNombre</strong>
+                <p>RUC @Model.EmisorRuc</p>
+                <p>@Model.EmisorDireccion</p>
+                <p>Representante: @Model.EmisorRepresentante</p>
+            </div>
+            <div class="contract-block">
+                <span class="contract-label">Arrendataria</span>
+                <strong>@Model.ClienteNombre</strong>
+                <p>DNI @Model.ClienteDni · Tel. @Model.ClienteTelefono</p>
+                <p>@(string.IsNullOrWhiteSpace(Model.ClienteDireccion) ? "Dirección no registrada" : Model.ClienteDireccion)</p>
+            </div>
+        </section>
+
+        <div class="contract-dates">
+            <div>
+                <span class="contract-label">Entrega</span>
+                <strong>@FechaHora(Model.FechaEntrega)</strong>
+            </div>
+            <div>
+                <span class="contract-label">Retorno pactado</span>
+                <strong>@FechaHora(Model.FechaRetorno)</strong>
+            </div>
+        </div>
+
+        <h3 class="contract-section-title">Prendas entregadas</h3>
+        <table class="contract-table">
+            <thead>
+                <tr>
+                    <th>Código / descripción</th>
+                    <th>Talla</th>
+                    <th class="num">Alquiler</th>
+                    <th class="num">Garantía</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var prenda in Model.Prendas)
+                {
+                    <tr>
+                        <td>
+                            <strong>@prenda.Codigo</strong>
+                            <span>@prenda.Nombre</span>
+                        </td>
+                        <td>@prenda.Talla</td>
+                        <td class="num">@Moneda(prenda.Precio)</td>
+                        <td class="num">@Moneda(prenda.Garantia)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <p class="contract-condition">
+            <strong>Condición de entrega:</strong> @Model.CondicionEntrega
+            La arrendataria declara recibir las prendas y revisar su estado.
+        </p>
+
+        <div class="contract-totals">
+            <div class="contract-total-line">
+                <span>Alquiler pagado</span>
+                <strong>@Moneda(Model.Subtotal)</strong>
+            </div>
+            <div class="contract-total-line">
+                <span>Garantía recibida en custodia</span>
+                <strong>@Moneda(Model.TotalGarantia)</strong>
+            </div>
+            <div class="contract-total-line is-grand">
+                <span>
+                    Total recibido
+                    @if (!string.IsNullOrWhiteSpace(Model.MedioPago))
+                    {
+                        <small>· @Model.MedioPago @Model.ReferenciaPago</small>
+                    }
+                </span>
+                <strong>@Moneda(Model.MontoTotal)</strong>
+            </div>
+        </div>
+
+        <section class="contract-clauses">
+            <h3 class="contract-section-title">Cláusulas</h3>
+            <div class="clause">
+                <span class="clause-num">1</span>
+                <div>
+                    <strong>Objeto, uso y plazo</strong>
+                    <p>
+                        La arrendadora entrega temporalmente las prendas descritas para uso personal de la arrendataria,
+                        desde el @FechaHora(Model.FechaEntrega) hasta el @FechaHora(Model.FechaRetorno).
+                        No podrán subalquilarse ni usarse fuera del territorio nacional sin autorización escrita.
+                    </p>
+                </div>
+            </div>
+            <div class="clause">
+                <span class="clause-num">2</span>
+                <div>
+                    <strong>Precio y garantía</strong>
+                    <p>
+                        El importe de alquiler asciende a @Moneda(Model.Subtotal) y la garantía a
+                        @Moneda(Model.TotalGarantia), recibida en custodia. La garantía no constituye pago
+                        y se devuelve tras la inspección y liquidación final.
+                    </p>
+                </div>
+            </div>
+            <div class="clause">
+                <span class="clause-num">3</span>
+                <div>
+                    <strong>Retraso en la devolución</strong>
+                    <p>
+                        Si la devolución se produce después de la fecha pactada, se aplicará una penalidad de
+                        @Moneda(Model.TarifaMora) por cada día calendario de retraso, calculada desde el día siguiente
+                        al vencimiento y hasta la recepción efectiva.
+                    </p>
+                </div>
+            </div>
+            <div class="clause">
+                <span class="clause-num">4</span>
+                <div>
+                    <strong>Inspección y daños</strong>
+                    <p>
+                        Al recibir las prendas se verificará su estado. Los daños leves se valoran hasta el
+                        @Porcentaje(Model.PorcentajeDanioLeve) del costo base de reparación (@Moneda(Model.CostoBaseReparacion));
+                        los daños graves, hasta el @Porcentaje(Model.PorcentajeDanioGrave). Los montos se descuentan de la
+                        garantía y, si no alcanza, la diferencia se cobra a la arrendataria.
+                    </p>
+                </div>
+            </div>
+            <div class="clause">
+                <span class="clause-num">5</span>
+                <div>
+                    <strong>Liquidación transparente</strong>
+                    <p>
+                        La liquidación se entrega con el detalle de mora, daños y saldo de garantía. La devolución de la
+                        garantía se realiza por el mismo medio de pago registrado o en efectivo, dejando constancia.
+                    </p>
+                </div>
+            </div>
+            <div class="clause">
+                <span class="clause-num">6</span>
+                <div>
+                    <strong>Datos personales</strong>
+                    <p>
+                        Los datos personales se tratan solo para la gestión del alquiler, la devolución y el contacto
+                        relacionado, conforme a la Ley N° 29733. La arrendataria puede ejercer sus derechos de acceso,
+                        rectificación, cancelación y oposición.
+                    </p>
+                </div>
+            </div>
+            <div class="clause">
+                <span class="clause-num">7</span>
+                <div>
+                    <strong>Aceptación y copia</strong>
+                    <p>
+                        La aceptación digital de este documento equivale a la firma de las partes. La arrendataria recibe
+                        una copia digital íntegra y puede solicitar una impresión.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <div class="contract-signatures">
+            <div class="contract-signature">
+                <span class="signature-line"></span>
+                <strong>@Model.EmisorRepresentante</strong>
+                <span>Administradora</span>
+                <small>Emisión registrada · @FechaHora(Model.FechaEmision)</small>
+            </div>
+            <div class="contract-signature">
+                <span class="signature-line"></span>
+                <strong>@Model.ClienteNombre</strong>
+                <span>Arrendataria · DNI @Model.ClienteDni</span>
+                <small>Aceptación registrada · @FechaHora(Model.FechaAceptacion)</small>
+            </div>
+        </div>
+
+        <footer class="contract-footer">
+            Documento de demostración · Identidades, RUC y dirección del taller son datos ficticios.
+            @Model.Codigo · Copia íntegra.
+        </footer>
+    </article>
+
+    <aside class="contract-side">
+        <section class="panel contract-side-card">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Estado del contrato</h2>
+                    <p class="panel-sub">Seguimiento de la entrega</p>
+                </div>
+            </div>
+            <span class="pill @Model.PillClass">@Model.Estado</span>
+            <div class="contract-side-stats">
+                <div>
+                    <span>Prendas</span>
+                    <strong>@Model.CantidadPrendas @(Model.CantidadPrendas == 1 ? "unidad" : "unidades")</strong>
+                </div>
+                <div>
+                    <span>Garantía</span>
+                    <strong>@Moneda(Model.TotalGarantia)</strong>
+                </div>
+            </div>
+            <p class="contract-side-note">@Model.NotaEstado</p>
+            @if (Model.Devuelto)
+            {
+                <span class="btn btn-secondary btn-block disabled">Contrato cerrado</span>
+            }
+            else
+            {
+                <a class="btn btn-secondary btn-block"
+                   asp-controller="Home"
+                   asp-action="Pendiente"
+                   asp-route-modulo="Devoluciones"
+                   asp-route-clave="devoluciones"
+                   asp-route-contrato="@Model.IdAlquiler">
+                    <span class="icon icon-package-check"></span>Registrar devolución
+                </a>
+            }
+        </section>
+
+        <section class="panel contract-side-card">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Entrega de copia</h2>
+                    <p class="panel-sub">Trazabilidad digital</p>
+                </div>
+            </div>
+            <div class="copy-checks">
+                <div class="copy-check">
+                    <span class="icon icon-circle-check"></span>
+                    <span>Aceptación de condiciones registrada</span>
+                </div>
+                <div class="copy-check @(Model.Consentimiento ? "" : "is-pending")">
+                    <span class="icon @(Model.Consentimiento ? "icon-circle-check" : "icon-alert")"></span>
+                    <span>@(Model.Consentimiento ? "Consentimiento Ley N° 29733 registrado" : "Consentimiento Ley N° 29733 pendiente")</span>
+                </div>
+                <div class="copy-check">
+                    <span class="icon icon-circle-check"></span>
+                    <span>Copia digital disponible</span>
+                </div>
+            </div>
+            <p class="contract-side-note">
+                @FechaHora(Model.FechaAceptacion)<br />
+                Destino: @UltimosDigitos(Model.TelefonoDestino). Conserva esta versión junto con la liquidación final.
+            </p>
+        </section>
+
+        <div class="protected-note">
+            <span class="icon icon-file-text icon-sm"></span>
+            <div>
+                <strong>Cero papel</strong>
+                <p>El contrato se comparte como copia digital. La aceptación queda registrada en el sistema.</p>
+            </div>
+        </div>
+    </aside>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            var printButton = document.querySelector('[data-print]');
+            if (printButton) {
+                printButton.addEventListener('click', function () { window.print(); });
+            }
+
+            var shareButton = document.querySelector('[data-share]');
+            var shareLabel = document.getElementById('share-label');
+            if (shareButton && shareLabel) {
+                shareButton.addEventListener('click', function () {
+                    var datos = {
+                        title: document.title,
+                        text: 'Contrato digital ' + '@Model.Codigo',
+                        url: window.location.href
+                    };
+
+                    if (navigator.share) {
+                        navigator.share(datos).catch(function () { });
+                        return;
+                    }
+
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(window.location.href)
+                            .then(function () {
+                                shareLabel.textContent = 'Enlace copiado';
+                                setTimeout(function () { shareLabel.textContent = 'Compartir copia'; }, 2200);
+                            })
+                            .catch(function () { window.prompt('Copia el enlace del contrato:', window.location.href); });
+                    } else {
+                        window.prompt('Copia el enlace del contrato:', window.location.href);
+                    }
+                });
+            }
+        })();
+    </script>
+}

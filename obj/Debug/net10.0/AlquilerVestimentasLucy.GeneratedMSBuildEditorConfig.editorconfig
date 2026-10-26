@@ -39,6 +39,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWNjb3VudC9Mb2dpbi5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/Views/Alquileres/ContratoDigital.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWxxdWlsZXJlcy9Db250cmF0b0RpZ2l0YWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/Views/Alquileres/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWxxdWlsZXJlcy9DcmVhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/Views/Alquileres/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWxxdWlsZXJlcy9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/Views/Clientes/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQ2xpZW50ZXMvQ3JlYXRlLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
