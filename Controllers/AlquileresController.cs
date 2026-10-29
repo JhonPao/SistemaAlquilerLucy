@@ -454,11 +454,16 @@ public class AlquileresController : Controller
 
         if (termino is not null)
         {
-            consulta = consulta.Where(c =>
-                c.Dni.Contains(termino) ||
-                c.Telefono.Contains(termino) ||
-                c.Nombres.Contains(termino) ||
-                c.Apellidos.Contains(termino));
+            var tokens = termino.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var token in tokens)
+            {
+                var parte = token;
+                consulta = consulta.Where(c =>
+                    c.Dni.Contains(parte) ||
+                    c.Telefono.Contains(parte) ||
+                    c.Nombres.Contains(parte) ||
+                    c.Apellidos.Contains(parte));
+            }
         }
 
         var clientes = await consulta
@@ -767,9 +772,10 @@ public class AlquileresController : Controller
         }
 
         var texto = termino.Trim();
+        var tokens = texto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var idContrato = ParsearContrato(texto);
 
-        if (idContrato.HasValue)
+        if (idContrato.HasValue && tokens.Length == 1)
         {
             var id = idContrato.Value;
             return consulta.Where(a =>
@@ -780,11 +786,19 @@ public class AlquileresController : Controller
                 a.Cliente.Telefono.Contains(texto));
         }
 
-        return consulta.Where(a =>
-            a.Cliente!.Dni.Contains(texto) ||
-            a.Cliente.Nombres.Contains(texto) ||
-            a.Cliente.Apellidos.Contains(texto) ||
-            a.Cliente.Telefono.Contains(texto));
+        // Cada palabra debe encontrarse en algún campo del cliente, sin importar
+        // si corresponde al nombre, apellido, DNI o teléfono.
+        foreach (var token in tokens)
+        {
+            var parte = token;
+            consulta = consulta.Where(a =>
+                a.Cliente!.Dni.Contains(parte) ||
+                a.Cliente.Nombres.Contains(parte) ||
+                a.Cliente.Apellidos.Contains(parte) ||
+                a.Cliente.Telefono.Contains(parte));
+        }
+
+        return consulta;
     }
 
     private static IQueryable<Alquiler> AplicarEstado(

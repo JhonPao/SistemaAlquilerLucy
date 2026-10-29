@@ -1,0 +1,30 @@
+@model UsuarioFormViewModel
+@{
+    ViewData["Title"] = "Editar usuario";
+    ViewData["ActiveNav"] = "administracion";
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a administración
+        </a>
+        <p class="eyebrow">Accesos y seguridad · RF-09</p>
+        <h1 class="page-title">Editar usuario</h1>
+        <p class="page-sub">Actualiza los datos de la cuenta, su rol o su estado de acceso.</p>
+    </div>
+</div>
+
+<form class="panel form-panel admin-form" method="post" asp-action="Edit" asp-route-id="@Model.Id">
+    <partial name="_FormularioUsuario" model="Model" />
+    <div class="form-actions">
+        <a class="btn btn-secondary" asp-action="Index">Cancelar</a>
+        <button class="btn btn-primary" type="submit">
+            <span class="icon icon-save"></span>Guardar cambios
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

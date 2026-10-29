@@ -27,10 +27,18 @@
     private static string Porcentaje(decimal valor) =>
         $"{(valor * 100m).ToString("0", System.Globalization.CultureInfo.InvariantCulture)}%";
 
-    private static string UltimosDigitos(string? telefono) =>
-        string.IsNullOrWhiteSpace(telefono)
-            ? "sin teléfono registrado"
-            : $"teléfono terminado en {telefono[^3..]}";
+    private static string UltimosDigitos(string? telefono)
+    {
+        if (string.IsNullOrWhiteSpace(telefono))
+        {
+            return "sin teléfono registrado";
+        }
+
+        var digitos = new string(telefono.Where(char.IsDigit).ToArray());
+        return digitos.Length >= 3
+            ? $"teléfono terminado en {digitos[^3..]}"
+            : "sin teléfono registrado";
+    }
 }
 
 @if (TempData["Exito"] is string exito)
@@ -185,9 +193,9 @@
                 <div>
                     <strong>Retraso en la devolución</strong>
                     <p>
-                        Si la devolución se produce después de la fecha pactada, se aplicará una penalidad de
-                        @Moneda(Model.TarifaMora) por cada día calendario de retraso, calculada desde el día siguiente
-                        al vencimiento y hasta la recepción efectiva.
+                        Si la devolución se produce después de la fecha y hora pactada, se aplicará una penalidad de
+                        @Moneda(Model.TarifaMora) por cada bloque de 24 horas o fracción de retraso, contado desde
+                        el vencimiento hasta la recepción efectiva.
                     </p>
                 </div>
             </div>
@@ -284,11 +292,9 @@
             else
             {
                 <a class="btn btn-secondary btn-block"
-                   asp-controller="Home"
-                   asp-action="Pendiente"
-                   asp-route-modulo="Devoluciones"
-                   asp-route-clave="devoluciones"
-                   asp-route-contrato="@Model.IdAlquiler">
+                   asp-controller="Devoluciones"
+                   asp-action="Create"
+                   asp-route-id="@Model.IdAlquiler">
                     <span class="icon icon-package-check"></span>Registrar devolución
                 </a>
             }

@@ -267,6 +267,41 @@ namespace AlquilerVestimentasLucy.Migrations
                     b.ToTable("DetallesAlquiler");
                 });
 
+            modelBuilder.Entity("AlquilerVestimentasLucy.Models.DetalleDevolucion", b =>
+                {
+                    b.Property<int>("IdDetalleDevolucion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdDetalleDevolucion"));
+
+                    b.Property<decimal>("CargoDanio")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("EstadoFisicoRecepcion")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdDetalleAlquiler")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdDevolucion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("IdDetalleDevolucion");
+
+                    b.HasIndex("IdDetalleAlquiler");
+
+                    b.HasIndex("IdDevolucion", "IdDetalleAlquiler")
+                        .IsUnique();
+
+                    b.ToTable("DetallesDevolucion");
+                });
+
             modelBuilder.Entity("AlquilerVestimentasLucy.Models.Devolucion", b =>
                 {
                     b.Property<int>("IdDevolucion")
@@ -274,6 +309,9 @@ namespace AlquilerVestimentasLucy.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdDevolucion"));
+
+                    b.Property<bool>("ClienteInformado")
+                        .HasColumnType("bit");
 
                     b.Property<int>("EstadoFisicoRecepcion")
                         .HasColumnType("int");
@@ -284,9 +322,21 @@ namespace AlquilerVestimentasLucy.Migrations
                     b.Property<int>("IdAlquiler")
                         .HasColumnType("int");
 
+                    b.Property<string>("MedioReembolso")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("MontoReembolso")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<string>("Observaciones")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("SaldoPendiente")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
@@ -607,6 +657,25 @@ namespace AlquilerVestimentasLucy.Migrations
                     b.Navigation("Prenda");
                 });
 
+            modelBuilder.Entity("AlquilerVestimentasLucy.Models.DetalleDevolucion", b =>
+                {
+                    b.HasOne("AlquilerVestimentasLucy.Models.DetalleAlquiler", "DetalleAlquiler")
+                        .WithMany()
+                        .HasForeignKey("IdDetalleAlquiler")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AlquilerVestimentasLucy.Models.Devolucion", "Devolucion")
+                        .WithMany("Detalles")
+                        .HasForeignKey("IdDevolucion")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DetalleAlquiler");
+
+                    b.Navigation("Devolucion");
+                });
+
             modelBuilder.Entity("AlquilerVestimentasLucy.Models.Devolucion", b =>
                 {
                     b.HasOne("AlquilerVestimentasLucy.Models.Alquiler", "Alquiler")
@@ -712,6 +781,8 @@ namespace AlquilerVestimentasLucy.Migrations
 
             modelBuilder.Entity("AlquilerVestimentasLucy.Models.Devolucion", b =>
                 {
+                    b.Navigation("Detalles");
+
                     b.Navigation("Penalidad");
                 });
 

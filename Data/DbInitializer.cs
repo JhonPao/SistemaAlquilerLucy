@@ -234,6 +234,19 @@ public static class DbInitializer
 
         if (!tieneContratoDevuelto)
         {
+            var detalleTerno = new DetalleAlquiler
+            {
+                IdPrenda = prendasPorCodigo["TRJ002"].IdPrenda,
+                PrecioUnitarioAlquiler = 150.00m,
+                GarantiaUnitaria = 200.00m
+            };
+            var detalleChaleco = new DetalleAlquiler
+            {
+                IdPrenda = prendasPorCodigo["CHA001"].IdPrenda,
+                PrecioUnitarioAlquiler = 50.00m,
+                GarantiaUnitaria = 80.00m
+            };
+
             context.Alquileres.Add(new Alquiler
             {
                 IdCliente = rosaElena.IdCliente,
@@ -247,17 +260,34 @@ public static class DbInitializer
                 MedioPago = "Transferencia",
                 ReferenciaPago = "BCP-1810-0180",
                 UserId = userId,
-                Detalles = new List<DetalleAlquiler>
-                {
-                    new() { IdPrenda = prendasPorCodigo["TRJ002"].IdPrenda, PrecioUnitarioAlquiler = 150.00m, GarantiaUnitaria = 200.00m },
-                    new() { IdPrenda = prendasPorCodigo["CHA001"].IdPrenda, PrecioUnitarioAlquiler = 50.00m, GarantiaUnitaria = 80.00m }
-                },
+                Detalles = new List<DetalleAlquiler> { detalleTerno, detalleChaleco },
                 Devolucion = new Devolucion
                 {
                     FechaDevolucionReal = hoy.AddDays(-7).AddHours(16).AddMinutes(30),
                     EstadoFisicoRecepcion = EstadoFisicoRecepcion.Optimo,
                     Observaciones = "Devolución completa, sin observaciones.",
-                    UserId = userId
+                    MedioReembolso = "Transferencia",
+                    MontoReembolso = 280.00m,
+                    SaldoPendiente = 0m,
+                    ClienteInformado = true,
+                    UserId = userId,
+                    Detalles = new List<DetalleDevolucion>
+                    {
+                        new()
+                        {
+                            DetalleAlquiler = detalleTerno,
+                            EstadoFisicoRecepcion = EstadoFisicoRecepcion.Optimo,
+                            CargoDanio = 0m,
+                            Observaciones = "Terno completo, sin daños."
+                        },
+                        new()
+                        {
+                            DetalleAlquiler = detalleChaleco,
+                            EstadoFisicoRecepcion = EstadoFisicoRecepcion.Optimo,
+                            CargoDanio = 0m,
+                            Observaciones = "Chaleco completo, sin daños."
+                        }
+                    }
                 }
             });
         }

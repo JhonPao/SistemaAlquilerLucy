@@ -1,0 +1,151 @@
+@model ReportesIngresosViewModel
+@{
+    ViewData["Title"] = "Reporte de ingresos";
+    ViewData["ActiveNav"] = "reportes";
+}
+
+@functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} {valor.Year}";
+
+    private static string FechaHoraCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} · {valor:HH:mm}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a reportes
+        </a>
+        <p class="eyebrow">Supervisión financiera · RF-08</p>
+        <h1 class="page-title">Reporte de ingresos</h1>
+        <p class="page-sub">Contratos, garantías, penalidades y reembolsos del período seleccionado.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="ExportarIngresos"
+       asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+       asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+        <span class="icon icon-download"></span>Descargar CSV
+    </a>
+</div>
+
+@if (Model.RangoInvalido)
+{
+    <div class="notice notice-warning" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>La fecha final era anterior a la inicial. El reporte se muestra para un solo día.</span>
+    </div>
+}
+
+<section class="panel report-filter-panel">
+    <form method="get" asp-action="Ingresos" class="report-filters">
+        <div>
+            <span class="field-label">Rango de contratos</span>
+            <div class="date-range-box">
+                <span class="icon icon-calendar icon-sm" aria-hidden="true"></span>
+                <input type="date" name="desde" value="@Model.Desde.ToString("yyyy-MM-dd")" aria-label="Fecha inicial" />
+                <span class="date-range-sep">—</span>
+                <input type="date" name="hasta" value="@Model.Hasta.ToString("yyyy-MM-dd")" aria-label="Fecha final" />
+            </div>
+        </div>
+        <button class="btn btn-secondary" type="submit">
+            <span class="icon icon-filter"></span>Aplicar rango
+        </button>
+        <span class="report-filter-note">
+            @Model.Filas.Count @(Model.Filas.Count == 1 ? "contrato encontrado" : "contratos encontrados")
+            entre @FechaCorta(Model.Desde) y @FechaCorta(Model.Hasta).
+        </span>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Detalle financiero</h2>
+            <p class="panel-sub">Importes registrados en los contratos del rango</p>
+        </div>
+        <span class="pill pill-neutral">@Model.Filas.Count contratos</span>
+    </div>
+
+    @if (Model.Filas.Count == 0)
+    {
+        <div class="empty">No hay contratos registrados en el rango seleccionado.</div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data-table report-income-table">
+                <thead>
+                    <tr>
+                        <th>Contrato / cliente</th>
+                        <th>Fecha</th>
+                        <th class="num">Alquiler</th>
+                        <th class="num">Garantía</th>
+                        <th class="num">Recibido</th>
+                        <th class="num">Penalidad</th>
+                        <th class="num">Reembolso</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fila in Model.Filas)
+                    {
+                        <tr>
+                            <td>
+                                <a class="cell-title table-link" asp-controller="Alquileres" asp-action="ContratoDigital" asp-route-id="@fila.IdAlquiler">@fila.Contrato</a>
+                                <span class="cell-sub">@fila.Cliente</span>
+                                <span class="cell-sub">DNI @fila.Dni</span>
+                            </td>
+                            <td>@FechaHoraCorta(fila.Fecha)</td>
+                            <td class="num">@Moneda(fila.Subtotal)</td>
+                            <td class="num">@Moneda(fila.Garantia)</td>
+                            <td class="num">@Moneda(fila.Total)</td>
+                            <td class="num">@(fila.Penalidad > 0 ? Moneda(fila.Penalidad) : "—")</td>
+                            <td class="num">@(fila.TieneDevolucion ? Moneda(fila.Reembolso) : "—")</td>
+                            <td><span class="pill @fila.PillClass">@fila.Estado</span></td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2">Totales del rango</td>
+                        <td class="num">@Moneda(Model.TotalAlquiler)</td>
+                        <td class="num">@Moneda(Model.TotalGarantia)</td>
+                        <td class="num">@Moneda(Model.TotalRecibido)</td>
+                        <td class="num">@Moneda(Model.TotalPenalidades)</td>
+                        <td class="num">@Moneda(Model.TotalReembolsos)</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+</section>
+
+<div class="report-summary-grid">
+    <div class="report-summary-card">
+        <span class="kpi-label">Total alquiler</span>
+        <strong>@Moneda(Model.TotalAlquiler)</strong>
+        <small>Ingreso por servicio de alquiler</small>
+    </div>
+    <div class="report-summary-card">
+        <span class="kpi-label">Garantías recibidas</span>
+        <strong>@Moneda(Model.TotalGarantia)</strong>
+        <small>Montos sujetos a devolución</small>
+    </div>
+    <div class="report-summary-card">
+        <span class="kpi-label">Penalidades</span>
+        <strong>@Moneda(Model.TotalPenalidades)</strong>
+        <small>Mora y deterioro liquidados</small>
+    </div>
+    <div class="report-summary-card">
+        <span class="kpi-label">Reembolsos</span>
+        <strong>@Moneda(Model.TotalReembolsos)</strong>
+        <small>Garantías devueltas a clientes</small>
+    </div>
+</div>

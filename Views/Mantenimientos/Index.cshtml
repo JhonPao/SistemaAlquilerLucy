@@ -1,0 +1,284 @@
+@using AlquilerVestimentasLucy.Data
+@model MantenimientosIndexViewModel
+@{
+    ViewData["Title"] = "Mantenimiento";
+    ViewData["ActiveNav"] = "mantenimiento";
+}
+
+@functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]}";
+
+    private static string FechaHoraCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} · {valor:HH:mm}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+@if (TempData["Info"] is string info)
+{
+    <div class="notice notice-info" style="margin-bottom:16px">
+        <span class="icon icon-info"></span>
+        <span>@info</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Cuidado y trazabilidad · RF-07</p>
+        <h1 class="page-title">Mantenimiento</h1>
+        <p class="page-sub">
+            Controla las órdenes de lavandería, costura y desinfección. La prenda permanece bloqueada hasta registrar su salida.
+        </p>
+    </div>
+    @if (User.IsInRole(DbInitializer.RolAdministradora) || User.IsInRole(DbInitializer.RolAsistente))
+    {
+        <a class="btn btn-primary" asp-action="Create">
+            <span class="icon icon-plus"></span>Nueva orden
+        </a>
+    }
+</div>
+
+<div class="kpi-grid">
+    <article class="kpi">
+        <span class="kpi-label">En taller</span>
+        <span class="kpi-value">@Model.KpiEnTaller</span>
+        <span class="kpi-foot">@Model.PrendasEnTaller @(Model.PrendasEnTaller == 1 ? "prenda bloqueada" : "prendas bloqueadas")</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Vencidas</span>
+        <span class="kpi-value">@Model.KpiVencidos</span>
+        <span class="kpi-foot">Salida estimada ya cumplida</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Finalizadas este mes</span>
+        <span class="kpi-value green">@Model.KpiFinalizadosMes</span>
+        <span class="kpi-foot">Prendas que volvieron al inventario</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Costo del mes</span>
+        <span class="kpi-value">@Moneda(Model.KpiCostoMes)</span>
+        <span class="kpi-foot">Servicios de mantenimiento registrados</span>
+    </article>
+</div>
+
+@if (Model.Alerta is not null)
+{
+    <div class="rental-alert">
+        <span class="icon icon-alert"></span>
+        <div class="rental-alert-body">
+            <strong>La orden #@Model.Alerta.IdMantenimiento.ToString("D4") de @Model.Alerta.Codigo requiere atención</strong>
+            <p>
+                @Model.Alerta.Nombre · @Model.Alerta.TipoServicioTexto ·
+                Ingresó el @FechaHoraCorta(Model.Alerta.FechaIngreso).
+            </p>
+            <p>
+                Salida estimada: @FechaHoraCorta(Model.Alerta.FechaSalidaEstimada).
+                Lleva <strong>@Model.Alerta.DiasEnTallerTexto</strong> en el taller.
+            </p>
+        </div>
+        @if (User.IsInRole(DbInitializer.RolAdministradora) || User.IsInRole(DbInitializer.RolAsistente))
+        {
+            <a class="btn btn-sm btn-secondary" asp-action="Edit" asp-route-id="@Model.Alerta.IdMantenimiento">Revisar orden</a>
+        }
+    </div>
+}
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Órdenes del taller</h2>
+            <p class="panel-sub">Corte de consulta: @FechaHoraCorta(Model.FechaCorte)</p>
+        </div>
+        @if (User.IsInRole(DbInitializer.RolAdministradora) || User.IsInRole(DbInitializer.RolAsistente))
+        {
+            <a class="panel-link" asp-action="Exportar" asp-route-q="@Model.Q" asp-route-estado="@Model.EstadoTab">
+                <span class="icon icon-download icon-xs"></span>Exportar órdenes
+            </a>
+        }
+    </div>
+
+    <div class="tabs">
+        <a class="tab @(Model.EstadoTab == "encurso" ? "active" : "")"
+           asp-action="Index" asp-route-estado="encurso" asp-route-q="@Model.Q">
+            En curso <span>@Model.ConteoEnCurso</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "vencidos" ? "active" : "")"
+           asp-action="Index" asp-route-estado="vencidos" asp-route-q="@Model.Q">
+            Vencidas <span>@Model.ConteoVencidos</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "finalizados" ? "active" : "")"
+           asp-action="Index" asp-route-estado="finalizados" asp-route-q="@Model.Q">
+            Finalizadas <span>@Model.ConteoFinalizados</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "todos" ? "active" : "")"
+           asp-action="Index" asp-route-estado="todos" asp-route-q="@Model.Q">
+            Todas <span>@Model.ConteoTodos</span>
+        </a>
+    </div>
+
+    <form method="get" asp-action="Index" class="maintenance-filters">
+        <div class="search-field">
+            <span class="icon icon-search icon-sm"></span>
+            <input class="input"
+                   type="search"
+                   name="q"
+                   value="@Model.Q"
+                   placeholder="Código, prenda, categoría u observación"
+                   aria-label="Buscar órdenes de mantenimiento" />
+        </div>
+        <button class="btn btn-secondary" type="submit">
+            <span class="icon icon-search"></span>Buscar
+        </button>
+    </form>
+
+    @if (Model.Filas.Count == 0)
+    {
+        <div class="empty">
+            No encontramos órdenes con esos criterios.
+            @if (Model.Q is not null || Model.EstadoTab != "encurso")
+            {
+                <span> Prueba con otro código o cambia el estado.</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data-table maintenance-table">
+                <thead>
+                    <tr>
+                        <th>Prenda</th>
+                        <th>Servicio</th>
+                        <th>Ingreso</th>
+                        <th>Salida estimada</th>
+                        <th class="num">Costo</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fila in Model.Filas)
+                    {
+                        <tr>
+                            <td>
+                                <a class="cell-title table-link"
+                                   asp-controller="Prendas"
+                                   asp-action="Details"
+                                   asp-route-id="@fila.IdPrenda">@fila.Codigo</a>
+                                <span class="cell-sub">@fila.Nombre</span>
+                                <span class="cell-sub">@fila.Categoria · Talla @fila.Talla</span>
+                            </td>
+                            <td>
+                                <span class="maintenance-service">@fila.TipoServicioTexto</span>
+                                <span class="cell-sub">Orden #@fila.IdMantenimiento.ToString("D4")</span>
+                            </td>
+                            <td>
+                                <span class="cell-title">@FechaCorta(fila.FechaIngreso)</span>
+                                <span class="cell-sub">@fila.FechaIngreso.ToString("HH:mm")</span>
+                            </td>
+                            <td>
+                                @if (fila.FechaSalidaReal is not null)
+                                {
+                                    <span class="cell-title">@FechaCorta(fila.FechaSalidaReal.Value)</span>
+                                    <span class="cell-sub">Finalizada @fila.FechaSalidaReal.Value.ToString("HH:mm")</span>
+                                }
+                                else
+                                {
+                                    <span class="cell-title">@FechaCorta(fila.FechaSalidaEstimada)</span>
+                                    <span class="cell-sub">@fila.FechaSalidaEstimada.ToString("HH:mm") · @fila.DiasEnTallerTexto</span>
+                                }
+                            </td>
+                            <td class="num">@Moneda(fila.CostoServicio)</td>
+                            <td><span class="pill @fila.PillClass">@fila.Estado</span></td>
+                            <td>
+                                <div class="maintenance-actions">
+                                    <a class="table-link"
+                                       asp-controller="Prendas"
+                                       asp-action="Details"
+                                       asp-route-id="@fila.IdPrenda">Ver prenda</a>
+                                    @if (fila.EnCurso && (User.IsInRole(DbInitializer.RolAdministradora) || User.IsInRole(DbInitializer.RolAsistente)))
+                                    {
+                                        <a class="table-link" asp-action="Edit" asp-route-id="@fila.IdMantenimiento">Editar</a>
+                                        <form method="post" asp-action="Finalizar" asp-route-id="@fila.IdMantenimiento"
+                                              onsubmit="return confirm('¿Confirmas la salida de @fila.Codigo del taller? La prenda volverá a estar disponible.');">
+                                            <button class="table-link table-button" type="submit">Finalizar</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="pagination-bar">
+        <span>
+            @Model.TotalFiltrado @(Model.TotalFiltrado == 1 ? "orden encontrada" : "órdenes encontradas") ·
+            Órdenes del taller
+        </span>
+        <span class="pager">
+            <a class="page-btn @(Model.Page <= 1 ? "disabled" : "")"
+               asp-action="Index"
+               asp-route-page="@(Math.Max(1, Model.Page - 1))"
+               asp-route-estado="@Model.EstadoTab"
+               asp-route-q="@Model.Q"
+               aria-label="Página anterior">
+                <span class="icon icon-chevron-left icon-xs"></span>
+            </a>
+            <span class="page-btn active">@Model.Page</span>
+            <span class="page-btn disabled">de @Model.TotalPages</span>
+            <a class="page-btn @(Model.Page >= Model.TotalPages ? "disabled" : "")"
+               asp-action="Index"
+               asp-route-page="@(Math.Min(Model.TotalPages, Model.Page + 1))"
+               asp-route-estado="@Model.EstadoTab"
+               asp-route-q="@Model.Q"
+               aria-label="Página siguiente">
+                <span class="icon icon-chevron-right icon-xs"></span>
+            </a>
+        </span>
+    </div>
+</section>
+
+<div class="maintenance-reading panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Cómo leer el taller</h2>
+            <p class="panel-sub">Estados y efecto en el inventario</p>
+        </div>
+    </div>
+    <div class="maintenance-reading-grid">
+        <div class="reading-row">
+            <span class="pill pill-atencion">En curso</span>
+            <p>La prenda está bloqueada y no puede incluirse en un nuevo alquiler.</p>
+        </div>
+        <div class="reading-row">
+            <span class="pill pill-vencido">Vencida</span>
+            <p>La fecha estimada de salida ya pasó; conviene revisar la orden con el taller.</p>
+        </div>
+        <div class="reading-row">
+            <span class="pill pill-completado">Finalizada</span>
+            <p>Al registrar la salida, la prenda vuelve a estar disponible para alquiler.</p>
+        </div>
+    </div>
+</div>

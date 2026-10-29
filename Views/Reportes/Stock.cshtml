@@ -1,0 +1,132 @@
+@using AlquilerVestimentasLucy.Models
+@model ReportesStockViewModel
+@{
+    ViewData["Title"] = "Reporte de inventario";
+    ViewData["ActiveNav"] = "reportes";
+}
+
+@functions {
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a reportes
+        </a>
+        <p class="eyebrow">Supervisión de inventario · RF-02 / RF-08</p>
+        <h1 class="page-title">Reporte de inventario</h1>
+        <p class="page-sub">Consulta la disponibilidad real de cada unidad y su estado operativo.</p>
+    </div>
+    <a class="btn btn-secondary" asp-action="ExportarStock"
+       asp-route-q="@Model.Q"
+       asp-route-estado="@((int?)Model.Estado)"
+       asp-route-categoria="@Model.Categoria">
+        <span class="icon icon-download"></span>Exportar inventario
+    </a>
+</div>
+
+<div class="kpi-grid">
+    <article class="kpi">
+        <span class="kpi-label">Unidades registradas</span>
+        <span class="kpi-value">@Model.Total</span>
+        <span class="kpi-foot">Inventario físico del taller</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Disponibles</span>
+        <span class="kpi-value green">@Model.Disponibles</span>
+        <span class="kpi-foot">Listas para un nuevo contrato</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Alquiladas</span>
+        <span class="kpi-value">@Model.Alquiladas</span>
+        <span class="kpi-foot">Fuera del taller con un cliente</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">En mantenimiento</span>
+        <span class="kpi-value">@Model.EnMantenimiento</span>
+        <span class="kpi-foot">Bloqueadas por una orden activa</span>
+    </article>
+</div>
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Inventario filtrado</h2>
+            <p class="panel-sub">@Model.Filas.Count @(Model.Filas.Count == 1 ? "unidad encontrada" : "unidades encontradas")</p>
+        </div>
+        <span class="pill pill-neutral">@Model.DeBaja de baja</span>
+    </div>
+
+    <form method="get" asp-action="Stock" class="report-stock-filters">
+        <div class="search-field">
+            <span class="icon icon-search icon-sm"></span>
+            <input class="input" type="search" name="q" value="@Model.Q"
+                   placeholder="Código, prenda, categoría o talla" aria-label="Buscar en inventario" />
+        </div>
+        <div class="select-wrap">
+            <select class="select" name="estado" aria-label="Filtrar por estado">
+                <option value="">Todos los estados</option>
+                @foreach (var estado in Enum.GetValues<EstadoPrenda>())
+                {
+                    <option value="@((int)estado)" selected="@(Model.Estado == estado)">@estado.Etiqueta()</option>
+                }
+            </select>
+        </div>
+        <div class="select-wrap">
+            <select class="select" name="categoria" aria-label="Filtrar por categoría">
+                <option value="">Todas las categorías</option>
+                @foreach (var categoria in Model.Categorias)
+                {
+                    <option value="@categoria" selected="@(Model.Categoria == categoria)">@categoria</option>
+                }
+            </select>
+        </div>
+        <button class="btn btn-secondary" type="submit">
+            <span class="icon icon-filter"></span>Filtrar
+        </button>
+    </form>
+
+    @if (Model.Filas.Count == 0)
+    {
+        <div class="empty">No encontramos prendas con esos criterios.</div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data-table stock-report-table">
+                <thead>
+                    <tr>
+                        <th>Prenda</th>
+                        <th>Categoría</th>
+                        <th>Talla</th>
+                        <th class="num">Alquiler</th>
+                        <th class="num">Garantía</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fila in Model.Filas)
+                    {
+                        <tr>
+                            <td>
+                                <a class="cell-title table-link" asp-controller="Prendas" asp-action="Details" asp-route-id="@fila.IdPrenda">@fila.Codigo</a>
+                                <span class="cell-sub">@fila.Nombre</span>
+                            </td>
+                            <td>@fila.Categoria</td>
+                            <td>@fila.Talla</td>
+                            <td class="num">@Moneda(fila.PrecioAlquiler)</td>
+                            <td class="num">@Moneda(fila.CostoGarantia)</td>
+                            <td><span class="pill @fila.Estado.ClasePill()">@fila.Estado.Etiqueta()</span></td>
+                            <td>
+                                <a class="table-link" asp-controller="Prendas" asp-action="Details" asp-route-id="@fila.IdPrenda">Ver ficha</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

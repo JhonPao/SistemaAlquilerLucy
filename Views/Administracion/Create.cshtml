@@ -1,0 +1,30 @@
+@model UsuarioFormViewModel
+@{
+    ViewData["Title"] = "Nuevo usuario";
+    ViewData["ActiveNav"] = "administracion";
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a administración
+        </a>
+        <p class="eyebrow">Accesos y seguridad · RF-09</p>
+        <h1 class="page-title">Nuevo usuario</h1>
+        <p class="page-sub">Crea una cuenta con el rol mínimo necesario para su trabajo en el taller.</p>
+    </div>
+</div>
+
+<form class="panel form-panel admin-form" method="post" asp-action="Create">
+    <partial name="_FormularioUsuario" model="Model" />
+    <div class="form-actions">
+        <a class="btn btn-secondary" asp-action="Index">Cancelar</a>
+        <button class="btn btn-primary" type="submit">
+            <span class="icon icon-save"></span>Crear usuario
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

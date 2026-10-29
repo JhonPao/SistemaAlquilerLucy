@@ -29,7 +29,7 @@
 </head>
 <body>
     <div class="app-shell">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar-principal" aria-label="Navegación principal">
             <a class="brand" asp-controller="Home" asp-action="Index">
                 <span class="brand-mark">lv</span>
                 <span>
@@ -57,18 +57,24 @@
                 <a class="nav-item @(activo == "alquileres" ? "active" : "")" asp-controller="Alquileres" asp-action="Index">
                     <span class="icon icon-file-text"></span>Alquileres
                 </a>
-                <a class="nav-item @(activo == "devoluciones" ? "active" : "")" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Devoluciones" asp-route-clave="devoluciones">
+                <a class="nav-item @(activo == "devoluciones" ? "active" : "")" asp-controller="Devoluciones" asp-action="Index">
                     <span class="icon icon-package-check"></span>Devoluciones
                 </a>
-                <a class="nav-item @(activo == "mantenimiento" ? "active" : "")" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Mantenimiento" asp-route-clave="mantenimiento">
+                <a class="nav-item @(activo == "mantenimiento" ? "active" : "")" asp-controller="Mantenimientos" asp-action="Index">
                     <span class="icon icon-washing"></span>Mantenimiento
                 </a>
-                <a class="nav-item @(activo == "reportes" ? "active" : "")" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Reportes y auditoría" asp-route-clave="reportes">
-                    <span class="icon icon-chart"></span>Reportes y auditoría
-                </a>
-                <a class="nav-item @(activo == "administracion" ? "active" : "")" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Administración" asp-route-clave="administracion">
-                    <span class="icon icon-settings"></span>Administración
-                </a>
+                @if (User.IsInRole("Administradora") || User.IsInRole("Vendedor"))
+                {
+                    <a class="nav-item @(activo == "reportes" ? "active" : "")" asp-controller="Reportes" asp-action="Index">
+                        <span class="icon icon-chart"></span>Reportes y auditoría
+                    </a>
+                }
+                @if (User.IsInRole("Administradora"))
+                {
+                    <a class="nav-item @(activo == "administracion" ? "active" : "")" asp-controller="Administracion" asp-action="Index">
+                        <span class="icon icon-settings"></span>Administración
+                    </a>
+                }
             </nav>
 
             <div class="sidebar-note">
@@ -93,13 +99,27 @@
             </div>
         </aside>
 
+        <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+
         <div class="workspace">
             <header class="topbar">
-                <nav class="breadcrumb" aria-label="Ruta de navegación">
-                    <span>Operaciones</span>
-                    <span class="sep">/</span>
-                    <strong>@ViewData["Title"]</strong>
-                </nav>
+                <div class="topbar-left">
+                    <button type="button"
+                            class="mobile-menu-btn"
+                            id="mobile-menu-toggle"
+                            aria-label="Abrir menú"
+                            aria-expanded="false"
+                            aria-controls="sidebar-principal">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <nav class="breadcrumb" aria-label="Ruta de navegación">
+                        <span>Operaciones</span>
+                        <span class="sep">/</span>
+                        <strong>@ViewData["Title"]</strong>
+                    </nav>
+                </div>
                 <div class="topbar-right">
                     <span class="demo-badge">Datos de demostración</span>
                     <span class="today">@hoy</span>

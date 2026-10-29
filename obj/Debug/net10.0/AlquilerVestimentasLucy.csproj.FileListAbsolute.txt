@@ -254,13 +254,13 @@
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/scxfx2ld4n-{0}-1rwzz1ecf6-1rwzz1ecf6.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/arcab645uq-{0}-ee6pvqm4vt-ee6pvqm4vt.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/ncfroppvds-{0}-ih7f2fihqq-ih7f2fihqq.gz
-/home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/d0f8zxmdfe-{0}-72r2srckm5-72r2srckm5.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/u8xwuyu9e8-{0}-h2wr9h7omx-h2wr9h7omx.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/vh4vbp9xkv-{0}-qotxoqjfg3-qotxoqjfg3.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/67rjky5ztj-{0}-q27350qum7-q27350qum7.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/pk0xvgwoni-{0}-hj72fkv5fj-hj72fkv5fj.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/7bw7857gz6-{0}-xo5fz5qqo3-xo5fz5qqo3.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/AlquilerVestimentasLucy.sourcelink.json
-/home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/metxk50xxv-{0}-p0bpjth7us-p0bpjth7us.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/bb1iazcvin-{0}-zyk5mk89tn-zyk5mk89tn.gz
 /home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/u9ex85d7h5-{0}-6nov0cxuty-6nov0cxuty.gz
+/home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/d0f8zxmdfe-{0}-xk7ejqmzk6-xk7ejqmzk6.gz
+/home/zodd/Downloads/T2_Arqui/Sistema/AlquilerVestimentasLucy/obj/Debug/net10.0/compressed/metxk50xxv-{0}-mp486j2n79-mp486j2n79.gz

@@ -1,0 +1,308 @@
+@model ConstanciaDevolucionViewModel
+@using System.Globalization
+@using AlquilerVestimentasLucy.Models
+@{
+    ViewData["Title"] = $"Liquidación {Model.Contrato}";
+    ViewData["ActiveNav"] = "devoluciones";
+}
+
+@functions {
+    private static readonly string[] MesesLargos =
+        ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+         "julio", "agosto", "setiembre", "octubre", "noviembre", "diciembre"];
+
+    private static readonly string[] MesesCortos =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaLarga(DateTime valor) =>
+        $"{valor.Day} de {MesesLargos[valor.Month - 1]} de {valor.Year}";
+
+    private static string FechaHora(DateTime valor) =>
+        $"{valor.Day:00} {MesesCortos[valor.Month - 1]} {valor.Year} · {valor:HH:mm}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", CultureInfo.InvariantCulture)}";
+
+    private static string Condicion(EstadoFisicoRecepcion estado) => estado switch
+    {
+        EstadoFisicoRecepcion.DanioLeve => "Con daño leve",
+        EstadoFisicoRecepcion.DanioGrave => "Con daño grave",
+        _ => "Óptimo"
+    };
+
+    private static string PillClass(EstadoFisicoRecepcion estado) => estado switch
+    {
+        EstadoFisicoRecepcion.DanioLeve => "pill-atencion",
+        EstadoFisicoRecepcion.DanioGrave => "pill-vencido",
+        _ => "pill-completado"
+    };
+}
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+
+<div class="page-head contract-page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a devoluciones
+        </a>
+        <h1 class="page-title">Constancia de devolución · @Model.Contrato</h1>
+        <p class="page-sub">
+            Liquidación final emitida el @FechaLarga(Model.FechaReal) a las @Model.FechaReal.ToString("HH:mm") · Copia íntegra
+        </p>
+    </div>
+    <div class="head-actions contract-actions">
+        <button type="button" class="btn btn-secondary" data-print>
+            <span class="icon icon-download"></span>Imprimir constancia
+        </button>
+        <a class="btn btn-primary" asp-controller="Alquileres" asp-action="ContratoDigital" asp-route-id="@Model.IdAlquiler">
+            <span class="icon icon-file-text"></span>Ver contrato
+        </a>
+    </div>
+</div>
+
+<div class="contract-layout">
+    <article class="contract-paper constancia-paper" id="constancia-devolucion">
+        <header class="contract-brand">
+            <div class="contract-brand-identity">
+                <span class="contract-brand-mark">lv</span>
+                <span>
+                    <span class="contract-brand-name">LucyVest</span>
+                    <span class="contract-brand-sub">CONTROL · ALQUILER DE VESTUARIO</span>
+                </span>
+            </div>
+            <span class="pill pill-completado">Liquidación final</span>
+        </header>
+
+        <h2 class="contract-title">Constancia de devolución y liquidación</h2>
+        <p class="contract-meta">N° @Model.Contrato · Lima, @FechaLarga(Model.FechaReal)</p>
+
+        <section class="contract-parties">
+            <div class="contract-block">
+                <span class="contract-label">Arrendataria</span>
+                <strong>@Model.Cliente</strong>
+                <p>DNI @Model.Dni @(string.IsNullOrWhiteSpace(Model.Telefono) ? string.Empty : $"· Tel. {Model.Telefono}")</p>
+                <p>Contrato de origen: @Model.Contrato</p>
+            </div>
+            <div class="contract-block">
+                <span class="contract-label">Recepción</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.RecibidoPor) ? "Equipo LucyVest" : Model.RecibidoPor)</strong>
+                <p>Responsable de recepción</p>
+                <p>Estado: contrato cerrado</p>
+            </div>
+        </section>
+
+        <div class="contract-dates">
+            <div>
+                <span class="contract-label">Retorno pactado</span>
+                <strong>@FechaHora(Model.FechaPactada)</strong>
+            </div>
+            <div>
+                <span class="contract-label">Retorno real</span>
+                <strong>@FechaHora(Model.FechaReal)</strong>
+            </div>
+        </div>
+
+        <h3 class="contract-section-title">Inspección de prendas</h3>
+        <table class="contract-table constancia-table">
+            <thead>
+                <tr>
+                    <th>Código / descripción</th>
+                    <th>Condición</th>
+                    <th>Destino</th>
+                    <th class="num">Cargo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var prenda in Model.Prendas)
+                {
+                    <tr>
+                        <td>
+                            <strong>@prenda.Codigo</strong>
+                            <span>@prenda.Nombre</span>
+                            @if (!string.IsNullOrWhiteSpace(prenda.Observaciones))
+                            {
+                                <span class="cell-sub">@prenda.Observaciones</span>
+                            }
+                        </td>
+                        <td><span class="pill @PillClass(prenda.EstadoFisicoRecepcion)">@Condicion(prenda.EstadoFisicoRecepcion)</span></td>
+                        <td>@prenda.Destino</td>
+                        <td class="num">@Moneda(prenda.CargoDanio)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="constancia-summary-grid">
+            <div class="constancia-note-card">
+                <span class="contract-label">Regla de mora</span>
+                <strong>@Model.DiasRetraso @(Model.DiasRetraso == 1 ? "día" : "días") de retraso</strong>
+                <p>RNC01 · cada bloque de 24 horas iniciado desde el retorno pactado.</p>
+            </div>
+            <div class="constancia-note-card">
+                <span class="contract-label">Inspección</span>
+                <strong>@Moneda(Model.TotalCargos) en cargos</strong>
+                <p>RNC02 · valorización por prenda según la política vigente.</p>
+            </div>
+        </div>
+
+        <div class="contract-totals">
+            <div class="contract-total-line">
+                <span>Garantía recibida en custodia</span>
+                <strong>@Moneda(Model.Garantia)</strong>
+            </div>
+            <div class="contract-total-line">
+                <span>Mora por retraso (RNC01)</span>
+                <strong>@Moneda(Model.MontoMora)</strong>
+            </div>
+            <div class="contract-total-line">
+                <span>Cargos por deterioro (RNC02)</span>
+                <strong>@Moneda(Model.TotalCargos)</strong>
+            </div>
+            <div class="contract-total-line">
+                <span>Total de penalidades</span>
+                <strong>@Moneda(Model.TotalPenalidad)</strong>
+            </div>
+            @if (Model.SaldoPendiente > 0)
+            {
+                <div class="contract-total-line is-grand is-balance">
+                    <span>Saldo pendiente de cobro</span>
+                    <strong>@Moneda(Model.SaldoPendiente)</strong>
+                </div>
+            }
+            else
+            {
+                <div class="contract-total-line is-grand">
+                    <span>Reembolso al cliente</span>
+                    <strong>@Moneda(Model.Reembolso)</strong>
+                </div>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Observaciones))
+        {
+            <p class="contract-condition">
+                <strong>Observaciones de recepción:</strong> @Model.Observaciones
+            </p>
+        }
+
+        <p class="contract-condition">
+            <strong>Conformidad:</strong> el cliente fue informado del desglose de mora, cargos por inspección y saldo de garantía.
+            @if (Model.ClienteInformado)
+            {
+                <span>La conformidad quedó registrada al confirmar la devolución.</span>
+            }
+            else
+            {
+                <span>La conformidad queda pendiente de firma.</span>
+            }
+        </p>
+
+        <div class="contract-signatures">
+            <div class="contract-signature">
+                <span class="signature-line"></span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.RecibidoPor) ? "Equipo LucyVest" : Model.RecibidoPor)</strong>
+                <span>Recepción y liquidación</span>
+                <small>Registro · @FechaHora(Model.FechaReal)</small>
+            </div>
+            <div class="contract-signature">
+                <span class="signature-line"></span>
+                <strong>@Model.Cliente</strong>
+                <span>Arrendataria · DNI @Model.Dni</span>
+                <small>Constancia digital · @FechaHora(Model.FechaRegistro)</small>
+            </div>
+        </div>
+
+        <footer class="contract-footer">
+            Documento de demostración · La liquidación conserva las tarifas y cargos aplicados para auditoría.
+            @Model.Contrato · Copia íntegra.
+        </footer>
+    </article>
+
+    <aside class="contract-side">
+        <section class="panel contract-side-card">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Contrato cerrado</h2>
+                    <p class="panel-sub">Devolución registrada</p>
+                </div>
+            </div>
+            <span class="pill pill-completado">Liquidado</span>
+            <div class="contract-side-stats">
+                <div>
+                    <span>Prendas recibidas</span>
+                    <strong>@Model.Prendas.Count @(Model.Prendas.Count == 1 ? "unidad" : "unidades")</strong>
+                </div>
+                <div>
+                    <span>Garantía</span>
+                    <strong>@Moneda(Model.Garantia)</strong>
+                </div>
+            </div>
+            <p class="contract-side-note">
+                La prenda sana vuelve a disponible. Las dañadas quedan bloqueadas en mantenimiento hasta su salida.
+            </p>
+            <a class="btn btn-secondary btn-block" asp-action="Index">
+                <span class="icon icon-package-check"></span>Volver a devoluciones
+            </a>
+        </section>
+
+        <section class="panel contract-side-card">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Resultado financiero</h2>
+                    <p class="panel-sub">Trazabilidad del cierre</p>
+                </div>
+            </div>
+            <div class="contract-side-stats">
+                <div>
+                    <span>Total penalidades</span>
+                    <strong>@Moneda(Model.TotalPenalidad)</strong>
+                </div>
+                <div>
+                    <span>@(Model.SaldoPendiente > 0 ? "Saldo pendiente" : "Reembolso")</span>
+                    <strong>@Moneda(Model.SaldoPendiente > 0 ? Model.SaldoPendiente : Model.Reembolso)</strong>
+                </div>
+            </div>
+            <div class="copy-checks">
+                <div class="copy-check">
+                    <span class="icon icon-circle-check"></span>
+                    <span>Medio: @(string.IsNullOrWhiteSpace(Model.MedioReembolso) ? "No registrado" : Model.MedioReembolso)</span>
+                </div>
+                <div class="copy-check @(Model.ClienteInformado ? "" : "is-pending")">
+                    <span class="icon @(Model.ClienteInformado ? "icon-circle-check" : "icon-alert")"></span>
+                    <span>@(Model.ClienteInformado ? "Cliente informado del desglose" : "Conformidad pendiente")</span>
+                </div>
+                <div class="copy-check">
+                    <span class="icon icon-circle-check"></span>
+                    <span>Constancia digital disponible</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="protected-note">
+            <span class="icon icon-file-text icon-sm"></span>
+            <div>
+                <strong>Liquidación transparente</strong>
+                <p>La mora y los daños se calcularon con las tarifas vigentes y quedaron guardados para auditoría.</p>
+            </div>
+        </div>
+    </aside>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            var printButton = document.querySelector('[data-print]');
+            if (printButton) {
+                printButton.addEventListener('click', function () { window.print(); });
+            }
+        })();
+    </script>
+}

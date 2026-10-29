@@ -104,7 +104,7 @@
         <a class="btn btn-sm btn-secondary"
            asp-action="Index"
            asp-route-id="@Model.Alerta.IdAlquiler"
-           asp-route-estado="@Model.EstadoTab"
+           asp-route-estado="vencidos"
            asp-route-q="@Model.Q"
            asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
            asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">Revisar</a>
@@ -261,12 +261,12 @@
     <div class="pagination-bar">
         <span>
             @Model.TotalFiltrado @(Model.TotalFiltrado == 1 ? "contrato encontrado" : "contratos encontrados") ·
-            Importes de demostración
+            Contratos del periodo
         </span>
         <span class="pager">
             <a class="page-btn @(Model.Page <= 1 ? "disabled" : "")"
                asp-action="Index"
-               asp-route-page="@(Model.Page - 1)"
+               asp-route-page="@(Math.Max(1, Model.Page - 1))"
                asp-route-id="@Model.Seleccionado?.IdAlquiler"
                asp-route-estado="@Model.EstadoTab"
                asp-route-q="@Model.Q"
@@ -279,7 +279,7 @@
             <span class="page-btn disabled">de @Model.TotalPages</span>
             <a class="page-btn @(Model.Page >= Model.TotalPages ? "disabled" : "")"
                asp-action="Index"
-               asp-route-page="@(Model.Page + 1)"
+               asp-route-page="@(Math.Min(Model.TotalPages, Model.Page + 1))"
                asp-route-id="@Model.Seleccionado?.IdAlquiler"
                asp-route-estado="@Model.EstadoTab"
                asp-route-q="@Model.Q"
@@ -318,11 +318,9 @@
                     @if (!Model.Seleccionado.Cerrado)
                     {
                         <a class="btn btn-secondary"
-                           asp-controller="Home"
-                           asp-action="Pendiente"
-                           asp-route-modulo="Devoluciones"
-                           asp-route-clave="devoluciones"
-                           asp-route-contrato="@Model.Seleccionado.IdAlquiler">
+                           asp-controller="Devoluciones"
+                           asp-action="Create"
+                           asp-route-id="@Model.Seleccionado.IdAlquiler">
                             <span class="icon icon-package-check"></span>Registrar devolución
                         </a>
                     }

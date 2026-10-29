@@ -49,7 +49,7 @@
                 <h2 class="panel-title">Próximas devoluciones</h2>
                 <p class="panel-sub">Ordenadas por fecha pactada de retorno</p>
             </div>
-            <a class="panel-link" asp-controller="Alquileres" asp-action="Index">Ver alquileres</a>
+            <a class="panel-link" asp-controller="Devoluciones" asp-action="Index">Ver devoluciones</a>
         </div>
 
         @if (Model.ProximasDevoluciones.Count == 0)
@@ -126,7 +126,7 @@
             <div>
                 <p class="strong">@(Model.EnMantenimiento == 1 ? "Una prenda sigue en servicio" : $"{Model.EnMantenimiento} prendas siguen en servicio")</p>
                 <p class="panel-sub" style="margin-top:6px">Las prendas en mantenimiento están bloqueadas para el catálogo de alquiler hasta registrar su salida.</p>
-                <a class="panel-link" style="margin-top:10px" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Mantenimiento" asp-route-clave="mantenimiento">Abrir mantenimiento <span class="icon icon-chevron-right icon-xs"></span></a>
+                <a class="panel-link" style="margin-top:10px" asp-controller="Mantenimientos" asp-action="Index">Abrir mantenimiento <span class="icon icon-chevron-right icon-xs"></span></a>
             </div>
         }
         else
@@ -144,7 +144,7 @@
             <div>
                 <p class="strong">Contratos con mora activa</p>
                 <p class="panel-sub" style="margin-top:6px">@Model.VencidosConMora @(Model.VencidosConMora == 1 ? "contrato superó" : "contratos superaron") la fecha pactada de devolución.</p>
-                <a class="panel-link" style="margin-top:10px" asp-controller="Home" asp-action="Pendiente" asp-route-modulo="Reportes y auditoría" asp-route-clave="reportes">Revisar reportes <span class="icon icon-chevron-right icon-xs"></span></a>
+                <a class="panel-link" style="margin-top:10px" asp-controller="Reportes" asp-action="Index">Revisar reportes <span class="icon icon-chevron-right icon-xs"></span></a>
             </div>
         }
         else

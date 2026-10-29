@@ -1,0 +1,154 @@
+@model PoliticaViewModel
+@{
+    ViewData["Title"] = "Política de negocio";
+    ViewData["ActiveNav"] = "administracion";
+}
+
+@functions {
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a administración
+        </a>
+        <p class="eyebrow">Reglas de liquidación · RNC01 / RNC02</p>
+        <h1 class="page-title">Política de negocio</h1>
+        <p class="page-sub">
+            Estos valores alimentan el cálculo de mora y deterioro en cada devolución.
+        </p>
+    </div>
+</div>
+
+<div class="admin-policy-layout">
+    <form class="panel" method="post" asp-action="Politica">
+        <div asp-validation-summary="ModelOnly" class="notice notice-danger" role="alert"></div>
+
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Tarifas vigentes</h2>
+                <p class="panel-sub">Los cambios aplican a las próximas liquidaciones.</p>
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-field span-2">
+                <label asp-for="TarifaMoraDiaria" class="field-label">Tarifa de mora diaria</label>
+                <div class="money-input">
+                    <span>S/</span>
+                    <input asp-for="TarifaMoraDiaria" type="number" step="0.01" min="0" class="input" />
+                </div>
+                <span asp-validation-for="TarifaMoraDiaria" class="field-error"></span>
+                <span class="field-hint">RNC01: se cobra por cada bloque de 24 horas o fracción de retraso.</span>
+            </div>
+
+            <div class="form-field">
+                <label asp-for="PorcentajeDanioLeve" class="field-label">Daño leve</label>
+                <div class="percent-input">
+                    <input asp-for="PorcentajeDanioLeve" type="number" step="0.01" min="0" max="100" class="input" />
+                    <span>%</span>
+                </div>
+                <span asp-validation-for="PorcentajeDanioLeve" class="field-error"></span>
+                <span class="field-hint">Porcentaje sobre el costo base de reparación.</span>
+            </div>
+
+            <div class="form-field">
+                <label asp-for="PorcentajeDanioGrave" class="field-label">Daño grave</label>
+                <div class="percent-input">
+                    <input asp-for="PorcentajeDanioGrave" type="number" step="0.01" min="0" max="100" class="input" />
+                    <span>%</span>
+                </div>
+                <span asp-validation-for="PorcentajeDanioGrave" class="field-error"></span>
+                <span class="field-hint">Porcentaje sobre el costo base de reparación.</span>
+            </div>
+
+            <div class="form-field span-2">
+                <label asp-for="CostoBaseReparacion" class="field-label">Costo base de reparación</label>
+                <div class="money-input">
+                    <span>S/</span>
+                    <input asp-for="CostoBaseReparacion" type="number" step="0.01" min="0" class="input" />
+                </div>
+                <span asp-validation-for="CostoBaseReparacion" class="field-error"></span>
+                <span class="field-hint">RNC02: base usada para estimar el cargo por deterioro.</span>
+            </div>
+        </div>
+
+        @if (Model.FechaActualizacion != default)
+        {
+            <div class="admin-policy-updated">
+                <span class="icon icon-info icon-xs"></span>
+                Última actualización: @Model.FechaActualizacion.ToString("dd/MM/yyyy HH:mm")
+            </div>
+        }
+
+        <div class="form-actions">
+            <a class="btn btn-secondary" asp-action="Index">Cancelar</a>
+            <button class="btn btn-primary" type="submit">
+                <span class="icon icon-save"></span>Guardar política
+            </button>
+        </div>
+    </form>
+
+    <aside class="admin-policy-side">
+        <div class="panel">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Resumen actual</h2>
+                    <p class="panel-sub">Valores con los que se liquidará</p>
+                </div>
+            </div>
+            <div class="admin-policy-list">
+                <div class="admin-policy-row">
+                    <span>Mora diaria</span>
+                    <strong id="policy-summary-mora">@Moneda(Model.TarifaMoraDiaria)</strong>
+                </div>
+                <div class="admin-policy-row">
+                    <span>Daño leve</span>
+                    <strong id="policy-summary-leve">@Model.PorcentajeDanioLeve.ToString("0.##")%</strong>
+                </div>
+                <div class="admin-policy-row">
+                    <span>Daño grave</span>
+                    <strong id="policy-summary-grave">@Model.PorcentajeDanioGrave.ToString("0.##")%</strong>
+                </div>
+                <div class="admin-policy-row">
+                    <span>Costo base</span>
+                    <strong id="policy-summary-base">@Moneda(Model.CostoBaseReparacion)</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="maintenance-form-note">
+            <span class="icon icon-shield"></span>
+            <p>Las tarifas quedan guardadas como referencia en cada penalidad liquidada, para conservar la trazabilidad.</p>
+        </div>
+    </aside>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const bind = (inputId, outputId, format) => {
+                const input = document.getElementById(inputId);
+                const output = document.getElementById(outputId);
+                if (!input || !output) return;
+                const update = () => {
+                    output.textContent = format(input.value);
+                };
+                input.addEventListener('input', update);
+                update();
+            };
+
+            bind('TarifaMoraDiaria', 'policy-summary-mora',
+                value => `S/ ${Number(value || 0).toFixed(2)}`);
+            bind('PorcentajeDanioLeve', 'policy-summary-leve',
+                value => `${Number(value || 0).toLocaleString('es-PE', { maximumFractionDigits: 2 })}%`);
+            bind('PorcentajeDanioGrave', 'policy-summary-grave',
+                value => `${Number(value || 0).toLocaleString('es-PE', { maximumFractionDigits: 2 })}%`);
+            bind('CostoBaseReparacion', 'policy-summary-base',
+                value => `S/ ${Number(value || 0).toFixed(2)}`);
+        })();
+    </script>
+}

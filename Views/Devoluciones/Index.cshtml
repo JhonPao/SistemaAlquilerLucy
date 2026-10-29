@@ -1,0 +1,264 @@
+@model DevolucionesIndexViewModel
+@{
+    ViewData["Title"] = "Devoluciones";
+    ViewData["ActiveNav"] = "devoluciones";
+}
+
+@functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]}";
+
+    private static string FechaHoraCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} · {valor:HH:mm}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+@if (TempData["Info"] is string info)
+{
+    <div class="notice notice-info" style="margin-bottom:16px">
+        <span class="icon icon-info"></span>
+        <span>@info</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Recepción e inspección · RF-05 / RF-06</p>
+        <h1 class="page-title">Devoluciones y liquidación</h1>
+        <p class="page-sub">
+            Recibe las prendas, registra el estado real de cada unidad y cierra el contrato con una liquidación transparente.
+        </p>
+    </div>
+    <a class="btn btn-secondary" asp-controller="Alquileres" asp-action="Index">
+        <span class="icon icon-file-text"></span>Ver alquileres
+    </a>
+</div>
+
+<div class="kpi-grid return-kpis">
+    <article class="kpi">
+        <span class="kpi-label">Por recibir</span>
+        <span class="kpi-value">@Model.KpiPorRecibir</span>
+        <span class="kpi-foot">@Model.PrendasPorRecibir @(Model.PrendasPorRecibir == 1 ? "prenda en custodia" : "prendas en custodia")</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Vencidos</span>
+        <span class="kpi-value">@Model.KpiVencidos</span>
+        <span class="kpi-foot">@Moneda(Model.MoraEstimada) de mora estimada al corte</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Devueltos hoy</span>
+        <span class="kpi-value">@Model.KpiDevueltosHoy</span>
+        <span class="kpi-foot">Recepciones registradas en el día</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Garantías en custodia</span>
+        <span class="kpi-value">@Moneda(Model.GarantiasEnCustodia)</span>
+        <span class="kpi-foot">Monto pendiente de liquidar</span>
+    </article>
+</div>
+
+@if (Model.Alerta is not null)
+{
+    <div class="rental-alert">
+        <span class="icon icon-alert"></span>
+        <div class="rental-alert-body">
+            <strong>@Model.Alerta.Contrato requiere recepción inmediata</strong>
+            <p>
+                @Model.Alerta.Cliente · @Model.Alerta.CantidadPrendas
+                @(Model.Alerta.CantidadPrendas == 1 ? "prenda" : "prendas") ·
+                Retorno pactado: @FechaHoraCorta(Model.Alerta.FechaRetorno).
+            </p>
+            <p>
+                Corte de consulta: @FechaHoraCorta(Model.Alerta.FechaCorte).
+                Mora estimada: @Model.Alerta.DiasMora × @Moneda(Model.TarifaMora) =
+                <strong>@Moneda(Model.Alerta.MoraEstimada)</strong>.
+            </p>
+        </div>
+        <a class="btn btn-sm btn-secondary" asp-action="Create" asp-route-id="@Model.Alerta.IdAlquiler">
+            Recibir ahora
+        </a>
+    </div>
+}
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <h2 class="panel-title">Cola de devoluciones</h2>
+            <p class="panel-sub">Corte de consulta: @FechaHoraCorta(Model.FechaCorte)</p>
+        </div>
+        <span class="pill pill-neutral">RNC01 · RNC02</span>
+    </div>
+
+    <div class="tabs">
+        <a class="tab @(Model.EstadoTab == "pendientes" ? "active" : "")"
+           asp-action="Index" asp-route-estado="pendientes" asp-route-q="@Model.Q">
+            Pendientes <span>@Model.ConteoPendientes</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "vencidos" ? "active" : "")"
+           asp-action="Index" asp-route-estado="vencidos" asp-route-q="@Model.Q">
+            Vencidos <span>@Model.ConteoVencidos</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "devueltos" ? "active" : "")"
+           asp-action="Index" asp-route-estado="devueltos" asp-route-q="@Model.Q">
+            Devueltos <span>@Model.ConteoDevueltos</span>
+        </a>
+        <a class="tab @(Model.EstadoTab == "todos" ? "active" : "")"
+           asp-action="Index" asp-route-estado="todos" asp-route-q="@Model.Q">
+            Todos <span>@Model.ConteoTodos</span>
+        </a>
+    </div>
+
+    <form method="get" asp-action="Index" class="return-filters">
+        <div class="search-field">
+            <span class="icon icon-search icon-sm"></span>
+            <input class="input"
+                   type="search"
+                   name="q"
+                   value="@Model.Q"
+                   placeholder="Contrato, DNI o nombre del cliente"
+                   aria-label="Buscar por contrato, DNI o nombre del cliente" />
+        </div>
+        <button class="btn btn-secondary" type="submit">
+            <span class="icon icon-search"></span>Buscar
+        </button>
+    </form>
+
+    @if (Model.Filas.Count == 0)
+    {
+        <div class="empty">
+            No encontramos devoluciones con esos criterios.
+            @if (Model.Q is not null || Model.EstadoTab != "pendientes")
+            {
+                <span> Prueba con otro contrato, cliente o estado.</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data-table return-table">
+                <thead>
+                    <tr>
+                        <th>Contrato / cliente</th>
+                        <th>Prendas</th>
+                        <th>Retorno pactado</th>
+                        <th class="num">Garantía</th>
+                        <th class="num">Mora / cargos</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fila in Model.Filas)
+                    {
+                        <tr>
+                            <td>
+                                <a class="cell-title table-link"
+                                   asp-action="@(fila.Devuelto ? "Liquidacion" : "Create")"
+                                   asp-route-id="@(fila.Devuelto ? fila.IdDevolucion : fila.IdAlquiler)">
+                                    @fila.Contrato
+                                </a>
+                                <span class="cell-sub">@fila.Cliente</span>
+                                <span class="cell-sub">DNI @fila.Dni</span>
+                            </td>
+                            <td>
+                                <span class="rental-codes">
+                                    @foreach (var prenda in fila.Prendas)
+                                    {
+                                        <span>@prenda</span>
+                                    }
+                                </span>
+                                <span class="cell-sub">@fila.CantidadPrendas @(fila.CantidadPrendas == 1 ? "unidad" : "unidades")</span>
+                            </td>
+                            <td>
+                                <span class="cell-title">@FechaHoraCorta(fila.FechaPactada)</span>
+                                @if (fila.FechaReal is not null)
+                                {
+                                    <span class="cell-sub">Recibido: @FechaHoraCorta(fila.FechaReal.Value)</span>
+                                }
+                                else
+                                {
+                                    <span class="cell-sub">@(fila.DiasRetraso > 0 ? $"{fila.DiasRetraso} {(fila.DiasRetraso == 1 ? "día" : "días")} de retraso" : "Dentro del plazo")</span>
+                                }
+                            </td>
+                            <td class="num">@Moneda(fila.Garantia)</td>
+                            <td class="num">
+                                @if (fila.Devuelto)
+                                {
+                                    <span class="cell-title">@Moneda(fila.TotalPenalidad)</span>
+                                    <span class="cell-sub">Liquidado</span>
+                                }
+                                else
+                                {
+                                    <span class="cell-title">@Moneda(fila.MoraEstimada)</span>
+                                    <span class="cell-sub">Mora estimada</span>
+                                }
+                            </td>
+                            <td><span class="pill @fila.PillClass">@fila.Estado</span></td>
+                            <td>
+                                @if (fila.Devuelto)
+                                {
+                                    <a class="table-link"
+                                       asp-action="Liquidacion"
+                                       asp-route-id="@fila.IdDevolucion">Ver liquidación</a>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-secondary"
+                                       asp-action="Create"
+                                       asp-route-id="@fila.IdAlquiler">Recibir</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="pagination-bar">
+        <span>
+            @Model.TotalFiltrado @(Model.TotalFiltrado == 1 ? "contrato encontrado" : "contratos encontrados") ·
+            Liquidaciones del periodo
+        </span>
+        <span class="pager">
+            <a class="page-btn @(Model.Page <= 1 ? "disabled" : "")"
+               asp-action="Index"
+               asp-route-page="@(Math.Max(1, Model.Page - 1))"
+               asp-route-estado="@Model.EstadoTab"
+               asp-route-q="@Model.Q"
+               aria-label="Página anterior">
+                <span class="icon icon-chevron-left icon-xs"></span>
+            </a>
+            <span class="page-btn active">@Model.Page</span>
+            <span class="page-btn disabled">de @Model.TotalPages</span>
+            <a class="page-btn @(Model.Page >= Model.TotalPages ? "disabled" : "")"
+               asp-action="Index"
+               asp-route-page="@(Math.Min(Model.TotalPages, Model.Page + 1))"
+               asp-route-estado="@Model.EstadoTab"
+               asp-route-q="@Model.Q"
+               aria-label="Página siguiente">
+                <span class="icon icon-chevron-right icon-xs"></span>
+            </a>
+        </span>
+    </div>
+</section>

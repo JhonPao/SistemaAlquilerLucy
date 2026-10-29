@@ -1,0 +1,239 @@
+@model ReportesIndexViewModel
+@{
+    ViewData["Title"] = "Reportes y auditoría";
+    ViewData["ActiveNav"] = "reportes";
+}
+
+@functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} {valor.Year}";
+
+    private static string FechaHoraCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} · {valor:HH:mm}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Supervisión financiera · RF-08</p>
+        <h1 class="page-title">Reportes y auditoría</h1>
+        <p class="page-sub">
+            Lee la operación completa: ingresos, garantías, liquidaciones, costos y movimientos del taller.
+        </p>
+    </div>
+    <div class="head-actions">
+        <a class="btn btn-secondary" asp-action="Stock">
+            <span class="icon icon-shirt"></span>Ver inventario
+        </a>
+        <a class="btn btn-primary" asp-action="ExportarIngresos"
+           asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+           asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+            <span class="icon icon-download"></span>Descargar reporte
+        </a>
+    </div>
+</div>
+
+@if (Model.RangoInvalido)
+{
+    <div class="notice notice-warning" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>La fecha final era anterior a la inicial. El reporte se muestra para un solo día.</span>
+    </div>
+}
+
+<section class="panel report-filter-panel">
+    <form method="get" asp-action="Index" class="report-filters">
+        <div>
+            <span class="field-label">Rango de contratos</span>
+            <div class="date-range-box">
+                <span class="icon icon-calendar icon-sm" aria-hidden="true"></span>
+                <input type="date" name="desde" value="@Model.Desde.ToString("yyyy-MM-dd")" aria-label="Fecha inicial" />
+                <span class="date-range-sep">—</span>
+                <input type="date" name="hasta" value="@Model.Hasta.ToString("yyyy-MM-dd")" aria-label="Fecha final" />
+            </div>
+        </div>
+        <button class="btn btn-secondary" type="submit">
+            <span class="icon icon-filter"></span>Aplicar rango
+        </button>
+        <span class="report-filter-note">
+            Mostrando del @FechaCorta(Model.Desde) al @FechaCorta(Model.Hasta).
+        </span>
+    </form>
+</section>
+
+<div class="kpi-grid report-kpis">
+    <article class="kpi">
+        <span class="kpi-label">Ingresos por alquileres</span>
+        <span class="kpi-value">@Moneda(Model.IngresosAlquiler)</span>
+        <span class="kpi-foot">@Model.Contratos @(Model.Contratos == 1 ? "contrato" : "contratos") en el rango</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Garantías en custodia</span>
+        <span class="kpi-value">@Moneda(Model.GarantiasCustodia)</span>
+        <span class="kpi-foot">@Model.ContratosAbiertos abiertos · @Model.ContratosVencidos vencidos</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Penalidades liquidadas</span>
+        <span class="kpi-value">@Moneda(Model.Penalidades)</span>
+        <span class="kpi-foot">@Moneda(Model.Reembolsos) reembolsados</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Balance operativo</span>
+        <span class="kpi-value @(Model.BalanceOperativo >= 0 ? "green" : "")">@Moneda(Model.BalanceOperativo)</span>
+        <span class="kpi-foot">Costos de mantenimiento: @Moneda(Model.CostosMantenimiento)</span>
+    </article>
+</div>
+
+<div class="report-grid">
+    <section class="panel report-chart-panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Evolución de ingresos</h2>
+                <p class="panel-sub">Últimos 6 meses · ingresos por mes</p>
+            </div>
+            <span class="pill pill-neutral">@Model.Serie.Sum(p => p.Contratos) contratos</span>
+        </div>
+
+        <div class="report-chart">
+            @foreach (var punto in Model.Serie)
+            {
+                <div class="report-chart-col">
+                    <span class="report-chart-value">@Moneda(punto.Ingresos)</span>
+                    <div class="report-chart-track">
+                        <span class="report-chart-bar" style="height:@($"{punto.Altura:0.#}%")"></span>
+                    </div>
+                    <span class="report-chart-label">@punto.Etiqueta</span>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Clientes con mayor movimiento</h2>
+                <p class="panel-sub">Por alquiler acumulado en el rango</p>
+            </div>
+        </div>
+
+        @if (Model.TopClientes.Count == 0)
+        {
+            <div class="empty">No hay contratos en este rango.</div>
+        }
+        else
+        {
+            <div class="report-client-list">
+                @for (var i = 0; i < Model.TopClientes.Count; i++)
+                {
+                    var cliente = Model.TopClientes[i];
+                    <div class="report-client">
+                        <span class="report-client-rank">@((i + 1).ToString("00"))</span>
+                        <div class="report-client-body">
+                            <div class="report-client-head">
+                                <strong>@cliente.Cliente</strong>
+                                <span>@Moneda(cliente.Ingresos)</span>
+                            </div>
+                            <span class="report-client-meta">DNI @cliente.Dni · @cliente.Contratos @(cliente.Contratos == 1 ? "contrato" : "contratos")</span>
+                            <div class="report-client-track">
+                                <span style="width:@($"{cliente.Altura:0.#}%")"></span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+<div class="report-grid report-grid-even">
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Estado del inventario</h2>
+                <p class="panel-sub">@Model.TotalPrendas unidades registradas</p>
+            </div>
+            <a class="panel-link" asp-action="Stock">Ver detalle <span class="icon icon-chevron-right icon-xs"></span></a>
+        </div>
+
+        <div class="state-bar">
+            <span class="s-disponible" style="width:@Model.PorcentajeDisponible.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></span>
+            <span class="s-alquilada" style="width:@Model.PorcentajeAlquilada.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></span>
+            <span class="s-mantenimiento" style="width:@Model.PorcentajeMantenimiento.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></span>
+            <span class="s-baja" style="width:@Model.PorcentajeBaja.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></span>
+        </div>
+
+        <div class="report-stock-rows">
+            <div class="state-row"><span>Disponibles</span><span>@Model.PrendasDisponibles</span></div>
+            <div class="state-row"><span>Alquiladas</span><span>@Model.PrendasAlquiladas</span></div>
+            <div class="state-row"><span>En mantenimiento</span><span>@Model.PrendasEnMantenimiento</span></div>
+            <div class="state-row"><span>De baja</span><span>@Model.PrendasDeBaja</span></div>
+        </div>
+
+        <div class="report-mini-note">
+            <span class="icon icon-info icon-xs"></span>
+            Las prendas en mantenimiento no están disponibles para nuevos contratos.
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Movimientos recientes</h2>
+                <p class="panel-sub">Contratos, devoluciones y órdenes del rango</p>
+            </div>
+        </div>
+
+        @if (Model.Actividad.Count == 0)
+        {
+            <div class="empty">No hay movimientos en este rango.</div>
+        }
+        else
+        {
+            <div class="report-activity">
+                @foreach (var item in Model.Actividad)
+                {
+                    <a class="report-activity-row"
+                       asp-controller="@item.Controller"
+                       asp-action="@item.Action"
+                       asp-route-id="@item.RouteId">
+                        <span class="report-activity-date">@FechaHoraCorta(item.Fecha)</span>
+                        <span class="report-activity-main">
+                            <span class="report-activity-title">@item.Titulo</span>
+                            <span class="report-activity-detail">@item.Detalle</span>
+                        </span>
+                        <span class="report-activity-side">
+                            <span class="pill @item.PillClass">@item.Tipo</span>
+                            <span class="report-activity-amount">@Moneda(item.Monto)</span>
+                        </span>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+<div class="report-links">
+    <a class="report-link-card" asp-action="Ingresos"
+       asp-route-desde="@Model.Desde.ToString("yyyy-MM-dd")"
+       asp-route-hasta="@Model.Hasta.ToString("yyyy-MM-dd")">
+        <span class="icon icon-chart"></span>
+        <span>
+            <strong>Reporte de ingresos</strong>
+            <small>Contratos, garantías, penalidades y reembolsos del rango.</small>
+        </span>
+        <span class="icon icon-chevron-right icon-xs"></span>
+    </a>
+    <a class="report-link-card" asp-action="Stock">
+        <span class="icon icon-shirt"></span>
+        <span>
+            <strong>Reporte de inventario</strong>
+            <small>Disponibilidad, prendas alquiladas y unidades en taller.</small>
+        </span>
+        <span class="icon icon-chevron-right icon-xs"></span>
+    </a>
+</div>

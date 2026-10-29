@@ -1,0 +1,465 @@
+@model RegistroDevolucionViewModel
+@using System.Globalization
+@using AlquilerVestimentasLucy.Models
+@{
+    ViewData["Title"] = "Registrar devolución";
+    ViewData["ActiveNav"] = "devoluciones";
+}
+
+@functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} {valor.Year}";
+
+    private static string FechaHora(DateTime valor) =>
+        $"{FechaCorta(valor)} · {valor:HH:mm}";
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", CultureInfo.InvariantCulture)}";
+
+    private static string Numero(decimal valor) =>
+        valor.ToString("0.00", CultureInfo.InvariantCulture);
+
+    private static string Condicion(EstadoFisicoRecepcion estado) => estado switch
+    {
+        EstadoFisicoRecepcion.DanioLeve => "Con daño leve",
+        EstadoFisicoRecepcion.DanioGrave => "Con daño grave",
+        _ => "Óptimo"
+    };
+
+    private static string Iniciales(string nombre)
+    {
+        var partes = nombre.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (partes.Length == 0)
+        {
+            return "CL";
+        }
+
+        return partes.Length == 1
+            ? partes[0][..1].ToUpperInvariant()
+            : string.Concat(partes[0][0], partes[^1][0]).ToUpperInvariant();
+    }
+}
+
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<div class="page-head contract-page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a devoluciones
+        </a>
+        <h1 class="page-title">Devolución e inspección</h1>
+        <p class="page-sub">Contrato @Model.Contrato · Registra el estado real de cada prenda y cierra la liquidación.</p>
+    </div>
+    <div class="head-actions">
+        <a class="btn btn-secondary" asp-controller="Alquileres" asp-action="ContratoDigital" asp-route-id="@Model.IdAlquiler">
+            <span class="icon icon-file-text"></span>Ver contrato
+        </a>
+    </div>
+</div>
+
+<section class="return-context panel">
+    <div class="return-context-client">
+        <span class="client-avatar">@Iniciales(Model.Cliente)</span>
+        <div>
+            <strong>@Model.Cliente</strong>
+            <span>DNI @Model.Dni @(string.IsNullOrWhiteSpace(Model.Telefono) ? string.Empty : $"· {Model.Telefono}")</span>
+        </div>
+    </div>
+    <div class="return-context-facts">
+        <div>
+            <span>Contrato</span>
+            <strong>@Model.Contrato</strong>
+        </div>
+        <div>
+            <span>Salida</span>
+            <strong>@FechaCorta(Model.FechaAlquiler)</strong>
+        </div>
+        <div>
+            <span>Retorno pactado</span>
+            <strong>@FechaHora(Model.FechaPactada)</strong>
+        </div>
+        <div>
+            <span>Prendas</span>
+            <strong>@Model.CantidadPrendas @(Model.CantidadPrendas == 1 ? "unidad" : "unidades")</strong>
+        </div>
+    </div>
+</section>
+
+<form method="post"
+      asp-action="Create"
+      asp-route-id="@Model.IdAlquiler"
+      id="form-devolucion"
+      class="return-form"
+      data-pactada="@Model.FechaPactada.ToString("o", CultureInfo.InvariantCulture)"
+      data-tarifa="@Numero(Model.TarifaMora)"
+      data-garantia="@Numero(Model.TotalGarantia)">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="IdAlquiler" />
+
+    <div asp-validation-summary="ModelOnly" class="notice notice-danger return-validation"></div>
+
+    <div class="return-layout">
+        <div class="return-main">
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">1 · Retorno real</h2>
+                        <p class="panel-sub">Confirma cuándo llegó el cliente al taller.</p>
+                    </div>
+                    <span class="pill pill-neutral">Recepción</span>
+                </div>
+
+                <div class="return-date-grid">
+                    <div class="field">
+                        <label asp-for="FechaDevolucionReal">Fecha y hora de retorno</label>
+                        <input asp-for="FechaDevolucionReal"
+                               class="input"
+                               type="datetime-local"
+                               asp-format="{0:yyyy-MM-ddTHH:mm}" />
+                        <span asp-validation-for="FechaDevolucionReal" class="field-error"></span>
+                    </div>
+                    <div class="return-difference">
+                        <span>Diferencia con el retorno pactado</span>
+                        <strong id="return-difference-text">
+                            @Math.Round(Model.DiferenciaHoras) horas ·
+                            @Model.DiasRetraso @(Model.DiasRetraso == 1 ? "día" : "días") de retraso
+                        </strong>
+                        <small>La mora se calcula por cada bloque de 24 horas iniciado desde la fecha pactada.</small>
+                    </div>
+                </div>
+
+                <div class="notice notice-info return-inline-note">
+                    <span class="icon icon-info"></span>
+                    <span>
+                        Los montos se recalculan al confirmar. Si el cliente devuelve antes del vencimiento,
+                        la mora será <strong>S/ 0.00</strong>.
+                    </span>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">2 · Inspección de prendas</h2>
+                        <p class="panel-sub">Marca la condición real de cada unidad. Las dañadas pasan a mantenimiento.</p>
+                    </div>
+                    <span class="pill pill-vigente">@Model.CantidadPrendas por revisar</span>
+                </div>
+
+                <div class="return-items">
+                    @for (var i = 0; i < Model.Prendas.Count; i++)
+                    {
+                        var prenda = Model.Prendas[i];
+                        var cargoLeve = Math.Round(Model.CostoBaseReparacion * Model.PorcentajeDanioLeve, 2);
+                        var cargoGrave = Math.Round(Model.CostoBaseReparacion * Model.PorcentajeDanioGrave, 2);
+
+                        <article class="return-item"
+                                 data-return-item
+                                 data-index="@i"
+                                 data-cargo-leve="@Numero(cargoLeve)"
+                                 data-cargo-grave="@Numero(cargoGrave)">
+                            <div class="return-item-head">
+                                <div class="return-item-identity">
+                                    <span class="rental-codes"><span>@prenda.Codigo</span></span>
+                                    <strong>@prenda.Nombre</strong>
+                                    <span class="cell-sub">Talla @prenda.Talla · Garantía @Moneda(prenda.GarantiaUnitaria)</span>
+                                </div>
+                                <span class="pill pill-neutral" data-destination="@i">Vuelve a disponible</span>
+                            </div>
+
+                            <div class="return-item-fields">
+                                <input type="hidden" name="Prendas[@i].IdDetalle" value="@prenda.IdDetalle" />
+                                <div class="field">
+                                    <label for="condicion-@i">Condición de recepción</label>
+                                    <div class="select-wrap">
+                                        <select id="condicion-@i"
+                                                name="Prendas[@i].EstadoFisicoRecepcion"
+                                                class="select return-condition"
+                                                data-index="@i">
+                                            <option value="1" selected="@(prenda.EstadoFisicoRecepcion == EstadoFisicoRecepcion.Optimo)">Óptimo · sin daños</option>
+                                            <option value="2" selected="@(prenda.EstadoFisicoRecepcion == EstadoFisicoRecepcion.DanioLeve)">Con daño leve</option>
+                                            <option value="3" selected="@(prenda.EstadoFisicoRecepcion == EstadoFisicoRecepcion.DanioGrave)">Con daño grave</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label for="observacion-@i">Observación de la prenda</label>
+                                    <input id="observacion-@i"
+                                           name="Prendas[@i].Observaciones"
+                                           value="@prenda.Observaciones"
+                                           class="input"
+                                           maxlength="300"
+                                           placeholder="Manchas, costuras, faltantes..." />
+                                </div>
+                                <div class="return-charge">
+                                    <span>Cargo justificado</span>
+                                    <strong data-charge="@i">@Moneda(prenda.CargoDanio)</strong>
+                                    <small>Se descuenta de la garantía</small>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">3 · Observaciones generales</h2>
+                        <p class="panel-sub">Opcional. Queda registrado en la constancia de devolución.</p>
+                    </div>
+                </div>
+                <div class="field">
+                    <label asp-for="Observaciones">Notas de recepción</label>
+                    <textarea asp-for="Observaciones"
+                              class="input"
+                              rows="3"
+                              maxlength="500"
+                              placeholder="Ej. El cliente devolvió las prendas en una bolsa de tela; se revisó el estado en recepción."></textarea>
+                    <span asp-validation-for="Observaciones" class="field-error"></span>
+                </div>
+            </section>
+        </div>
+
+        <aside class="return-side">
+            <section class="panel summary-card return-summary">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Liquidación provisional</h2>
+                        <p class="panel-sub">RNC01 · RNC02</p>
+                    </div>
+                    <span class="icon icon-sparkles"></span>
+                </div>
+
+                <div class="return-summary-block">
+                    <div class="summary-line">
+                        <span>Garantía recibida</span>
+                        <strong>@Moneda(Model.TotalGarantia)</strong>
+                    </div>
+                    <div class="summary-line">
+                        <span>Días de retraso</span>
+                        <strong id="sum-dias">@Model.DiasRetraso</strong>
+                    </div>
+                    <div class="summary-line">
+                        <span>Tarifa diaria</span>
+                        <strong>@Moneda(Model.TarifaMora)</strong>
+                    </div>
+                    <div class="summary-line">
+                        <span>Mora RNC01</span>
+                        <strong id="sum-mora">@Moneda(Model.MontoMora)</strong>
+                    </div>
+                </div>
+
+                <div class="return-summary-block">
+                    <div class="return-summary-label">Cargos por inspección</div>
+                    <div class="summary-lines">
+                        @for (var i = 0; i < Model.Prendas.Count; i++)
+                        {
+                            var prenda = Model.Prendas[i];
+                            <div class="summary-line">
+                                <span data-summary-label="@i">@prenda.Codigo · @Condicion(prenda.EstadoFisicoRecepcion)</span>
+                                <strong data-summary-charge="@i">@Moneda(prenda.CargoDanio)</strong>
+                            </div>
+                        }
+                    </div>
+                    <div class="summary-line">
+                        <span>Total cargos RNC02</span>
+                        <strong id="sum-cargos">@Moneda(Model.TotalCargos)</strong>
+                    </div>
+                </div>
+
+                <div class="summary-total">
+                    <span>Total a descontar</span>
+                    <strong id="sum-total">@Moneda(Model.TotalPenalidad)</strong>
+                </div>
+
+                <div class="return-result @(Model.SaldoPendiente > 0 ? "is-balance" : "")">
+                    <span id="sum-resultado-label">Reembolso al cliente</span>
+                    <strong id="sum-resultado">@Moneda(Model.SaldoPendiente > 0 ? Model.SaldoPendiente : Model.Reembolso)</strong>
+                    <small id="sum-resultado-note">
+                        @(Model.SaldoPendiente > 0
+                            ? "La penalidad supera la garantía; el saldo se cobra al cliente."
+                            : "Se devuelve el saldo de la garantía tras la liquidación.")
+                    </small>
+                </div>
+
+                <div class="field">
+                    <label asp-for="MedioReembolso">Medio de reembolso</label>
+                    <div class="select-wrap">
+                        <select asp-for="MedioReembolso" class="select">
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Yape/Plin">Yape / Plin</option>
+                            <option value="Efectivo">Efectivo</option>
+                        </select>
+                    </div>
+                    <span asp-validation-for="MedioReembolso" class="field-error"></span>
+                </div>
+
+                <label class="confirm-check">
+                    <input asp-for="ClienteInformado" />
+                    <span>Informé al cliente del desglose, la mora y los cargos por daño antes de confirmar.</span>
+                </label>
+                <span asp-validation-for="ClienteInformado" class="field-error"></span>
+
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top:16px">
+                    <span class="icon icon-package-check"></span>Confirmar devolución y liquidar
+                </button>
+                <p class="summary-note">
+                    La confirmación cierra el contrato, devuelve las prendas sanas a disponible y deriva las dañadas a mantenimiento.
+                </p>
+            </section>
+
+            <section class="panel policy-card">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Criterios aplicados</h2>
+                        <p class="panel-sub">Política vigente</p>
+                    </div>
+                </div>
+                <div class="policy-row">
+                    <span>Mora diaria (RNC01)</span>
+                    <strong>@Moneda(Model.TarifaMora)</strong>
+                </div>
+                <div class="policy-row">
+                    <span>Costo base de reparación</span>
+                    <strong>@Moneda(Model.CostoBaseReparacion)</strong>
+                </div>
+                <div class="policy-row">
+                    <span>Daño leve</span>
+                    <strong>@((Model.PorcentajeDanioLeve * 100).ToString("0", CultureInfo.InvariantCulture))%</strong>
+                </div>
+                <div class="policy-row">
+                    <span>Daño grave</span>
+                    <strong>@((Model.PorcentajeDanioGrave * 100).ToString("0", CultureInfo.InvariantCulture))%</strong>
+                </div>
+                <p class="summary-note">
+                    Los cargos se aplican solo si la inspección detecta deterioro. La prenda dañada no vuelve a disponible hasta completar mantenimiento.
+                </p>
+            </section>
+
+            <div class="protected-note">
+                <span class="icon icon-file-text icon-sm"></span>
+                <div>
+                    <strong>Liquidación auditable</strong>
+                    <p>Se guarda la tarifa aplicada, los cargos por prenda y el medio de reembolso en la constancia.</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+</form>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        (function () {
+            'use strict';
+
+            var form = document.getElementById('form-devolucion');
+            if (!form) return;
+
+            var dateInput = document.getElementById('FechaDevolucionReal');
+            var pactada = new Date(form.dataset.pactada);
+            var tarifa = parseFloat(form.dataset.tarifa) || 0;
+            var garantia = parseFloat(form.dataset.garantia) || 0;
+            var items = Array.prototype.slice.call(document.querySelectorAll('[data-return-item]'));
+            var etiquetas = { 1: 'Óptimo', 2: 'Con daño leve', 3: 'Con daño grave' };
+
+            function moneda(valor) {
+                return 'S/ ' + valor.toFixed(2);
+            }
+
+            function calcularDias(fecha) {
+                if (!fecha || isNaN(fecha.getTime())) return 0;
+                var diferencia = fecha.getTime() - pactada.getTime();
+                return diferencia > 0 ? Math.ceil(diferencia / 86400000) : 0;
+            }
+
+            function actualizar() {
+                var fecha = dateInput && dateInput.value ? new Date(dateInput.value) : new Date();
+                var dias = calcularDias(fecha);
+                var horas = Math.max(0, Math.round((fecha.getTime() - pactada.getTime()) / 3600000));
+                var mora = dias * tarifa;
+                var cargos = 0;
+
+                var diferencia = document.getElementById('return-difference-text');
+                if (diferencia) {
+                    diferencia.textContent = horas + ' horas · ' + dias + ' ' + (dias === 1 ? 'día' : 'días') + ' de retraso';
+                }
+
+                items.forEach(function (item, index) {
+                    var select = item.querySelector('select');
+                    var estado = select ? parseInt(select.value, 10) : 1;
+                    var cargo = estado === 2
+                        ? parseFloat(item.dataset.cargoLeve) || 0
+                        : estado === 3 ? parseFloat(item.dataset.cargoGrave) || 0 : 0;
+
+                    cargos += cargo;
+
+                    var cargoTexto = item.querySelector('[data-charge="' + index + '"]');
+                    if (cargoTexto) cargoTexto.textContent = moneda(cargo);
+
+                    var destino = item.querySelector('[data-destination="' + index + '"]');
+                    if (destino) {
+                        destino.textContent = estado === 1 ? 'Vuelve a disponible' : 'Deriva a mantenimiento';
+                        destino.className = 'pill ' + (estado === 1 ? 'pill-neutral' : estado === 2 ? 'pill-atencion' : 'pill-vencido');
+                    }
+
+                    var resumen = document.querySelector('[data-summary-charge="' + index + '"]');
+                    if (resumen) resumen.textContent = moneda(cargo);
+
+                    var etiqueta = document.querySelector('[data-summary-label="' + index + '"]');
+                    if (etiqueta) {
+                        var codigo = etiqueta.textContent.split(' · ')[0];
+                        etiqueta.textContent = codigo + ' · ' + etiquetas[estado];
+                    }
+                });
+
+                var total = mora + cargos;
+                var reembolso = Math.max(0, garantia - total);
+                var saldo = Math.max(0, total - garantia);
+
+                var diasTexto = document.getElementById('sum-dias');
+                if (diasTexto) diasTexto.textContent = dias;
+                var moraTexto = document.getElementById('sum-mora');
+                if (moraTexto) moraTexto.textContent = moneda(mora);
+                var cargosTexto = document.getElementById('sum-cargos');
+                if (cargosTexto) cargosTexto.textContent = moneda(cargos);
+                var totalTexto = document.getElementById('sum-total');
+                if (totalTexto) totalTexto.textContent = moneda(total);
+
+                var resultadoLabel = document.getElementById('sum-resultado-label');
+                var resultado = document.getElementById('sum-resultado');
+                var resultadoNota = document.getElementById('sum-resultado-note');
+                if (resultadoLabel) {
+                    resultadoLabel.textContent = saldo > 0 ? 'Saldo pendiente al cliente' : 'Reembolso al cliente';
+                }
+                if (resultado) resultado.textContent = moneda(saldo > 0 ? saldo : reembolso);
+                if (resultadoNota) {
+                    resultadoNota.textContent = saldo > 0
+                        ? 'La penalidad supera la garantía; el saldo se cobra al cliente.'
+                        : 'Se devuelve el saldo de la garantía tras la liquidación.';
+                }
+
+                var caja = document.querySelector('.return-result');
+                if (caja) caja.classList.toggle('is-balance', saldo > 0);
+            }
+
+            if (dateInput) dateInput.addEventListener('change', actualizar);
+            items.forEach(function (item) {
+                var select = item.querySelector('select');
+                if (select) select.addEventListener('change', actualizar);
+            });
+
+            actualizar();
+        })();
+    </script>
+}

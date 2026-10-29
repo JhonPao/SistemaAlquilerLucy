@@ -1,0 +1,237 @@
+@using AlquilerVestimentasLucy.Data
+@model AdministracionIndexViewModel
+@{
+    ViewData["Title"] = "Administración";
+    ViewData["ActiveNav"] = "administracion";
+}
+
+@functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} {valor.Year}";
+
+    private static string RolPill(string rol) => rol switch
+    {
+        DbInitializer.RolAdministradora => "pill-vigente",
+        DbInitializer.RolAsistente => "pill-atencion",
+        _ => "pill-neutral"
+    };
+
+    private static string Moneda(decimal valor) =>
+        $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+
+@if (TempData["Exito"] is string exito)
+{
+    <div class="notice notice-success" style="margin-bottom:16px">
+        <span class="icon icon-circle-check"></span>
+        <span>@exito</span>
+    </div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="notice notice-danger" style="margin-bottom:16px">
+        <span class="icon icon-alert"></span>
+        <span>@error</span>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Gobierno del sistema · RF-09</p>
+        <h1 class="page-title">Administración</h1>
+        <p class="page-sub">
+            Gestiona accesos, roles y las tarifas que alimentan las liquidaciones del taller.
+        </p>
+    </div>
+    <div class="head-actions">
+        <a class="btn btn-secondary" asp-action="Politica">
+            <span class="icon icon-settings"></span>Política de negocio
+        </a>
+        <a class="btn btn-primary" asp-action="Create">
+            <span class="icon icon-plus"></span>Nuevo usuario
+        </a>
+    </div>
+</div>
+
+<div class="kpi-grid">
+    <article class="kpi">
+        <span class="kpi-label">Usuarios registrados</span>
+        <span class="kpi-value">@Model.TotalUsuarios</span>
+        <span class="kpi-foot">Cuentas con acceso al sistema</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Usuarios activos</span>
+        <span class="kpi-value green">@Model.UsuariosActivos</span>
+        <span class="kpi-foot">Pueden iniciar sesión</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Administradoras</span>
+        <span class="kpi-value">@Model.Administradores</span>
+        <span class="kpi-foot">Acceso completo al sistema</span>
+    </article>
+    <article class="kpi">
+        <span class="kpi-label">Inactivos</span>
+        <span class="kpi-value">@Model.UsuariosInactivos</span>
+        <span class="kpi-foot">Cuentas sin acceso</span>
+    </article>
+</div>
+
+<div class="admin-grid">
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Usuarios y roles</h2>
+                <p class="panel-sub">@Model.Usuarios.Count @(Model.Usuarios.Count == 1 ? "cuenta encontrada" : "cuentas encontradas")</p>
+            </div>
+            <span class="pill pill-neutral">RBAC</span>
+        </div>
+
+        <form method="get" asp-action="Index" class="admin-filters">
+            <div class="search-field">
+                <span class="icon icon-search icon-sm"></span>
+                <input class="input" type="search" name="q" value="@Model.Q"
+                       placeholder="Nombre o correo" aria-label="Buscar usuarios" />
+            </div>
+            <div class="select-wrap">
+                <select class="select" name="rol" aria-label="Filtrar por rol">
+                    <option value="">Todos los roles</option>
+                    @foreach (var rol in Model.Roles)
+                    {
+                        <option value="@rol" selected="@(Model.Rol == rol)">@rol</option>
+                    }
+                </select>
+            </div>
+            <div class="select-wrap">
+                <select class="select" name="estado" aria-label="Filtrar por estado">
+                    <option value="todos" selected="@(Model.Estado == "todos")">Todos</option>
+                    <option value="activos" selected="@(Model.Estado == "activos")">Activos</option>
+                    <option value="inactivos" selected="@(Model.Estado == "inactivos")">Inactivos</option>
+                </select>
+            </div>
+            <button class="btn btn-secondary" type="submit">
+                <span class="icon icon-filter"></span>Filtrar
+            </button>
+        </form>
+
+        @if (Model.Usuarios.Count == 0)
+        {
+            <div class="empty">No encontramos usuarios con esos criterios.</div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="data-table admin-user-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th>Creado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var usuario in Model.Usuarios)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="cell-title">
+                                        @usuario.NombreCompleto
+                                        @if (usuario.EsUsuarioActual)
+                                        {
+                                            <span class="admin-you">Tú</span>
+                                        }
+                                    </span>
+                                    <span class="cell-sub">@usuario.Email</span>
+                                </td>
+                                <td><span class="pill @RolPill(usuario.Rol)">@usuario.Rol</span></td>
+                                <td>
+                                    <span class="pill @(usuario.Activo ? "pill-completado" : "pill-neutral")">
+                                        @(usuario.Activo ? "Activo" : "Inactivo")
+                                    </span>
+                                </td>
+                                <td>@FechaCorta(usuario.FechaCreacion)</td>
+                                <td>
+                                    <div class="admin-actions">
+                                        <a class="table-link" asp-action="Edit" asp-route-id="@usuario.Id">Editar</a>
+                                        <a class="table-link" asp-action="ResetPassword" asp-route-id="@usuario.Id">Contraseña</a>
+                                        @if (!usuario.EsUsuarioActual)
+                                        {
+                                            <form method="post" asp-action="ToggleActivo" asp-route-id="@usuario.Id"
+                                                  onsubmit="return confirm('¿Confirmas @(usuario.Activo ? "desactivar" : "activar") la cuenta de @usuario.NombreCompleto?');">
+                                                <button class="table-link table-button" type="submit">
+                                                    @(usuario.Activo ? "Desactivar" : "Activar")
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <aside class="admin-side">
+        <div class="panel policy-card">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Política vigente</h2>
+                    <p class="panel-sub">RNC01 · RNC02</p>
+                </div>
+                <span class="icon icon-shield"></span>
+            </div>
+            <div class="admin-policy-list">
+                <div class="admin-policy-row">
+                    <span>Mora diaria</span>
+                    <strong>@Moneda(Model.Politica.TarifaMoraDiaria)</strong>
+                </div>
+                <div class="admin-policy-row">
+                    <span>Daño leve</span>
+                    <strong>@Model.Politica.PorcentajeDanioLeve.ToString("0.##")%</strong>
+                </div>
+                <div class="admin-policy-row">
+                    <span>Daño grave</span>
+                    <strong>@Model.Politica.PorcentajeDanioGrave.ToString("0.##")%</strong>
+                </div>
+                <div class="admin-policy-row">
+                    <span>Costo base</span>
+                    <strong>@Moneda(Model.Politica.CostoBaseReparacion)</strong>
+                </div>
+            </div>
+            <a class="btn btn-secondary admin-policy-btn" asp-action="Politica">
+                <span class="icon icon-edit"></span>Actualizar tarifas
+            </a>
+            @if (Model.Politica.FechaActualizacion != default)
+            {
+                <p class="admin-policy-date">Actualizada el @FechaCorta(Model.Politica.FechaActualizacion).</p>
+            }
+        </div>
+
+        <div class="panel admin-roles">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Roles del sistema</h2>
+                    <p class="panel-sub">Permisos por responsabilidad</p>
+                </div>
+            </div>
+            <div class="admin-role-row">
+                <span class="pill pill-vigente">Administradora</span>
+                <p>Control total: usuarios, políticas, inventario y reportes.</p>
+            </div>
+            <div class="admin-role-row">
+                <span class="pill pill-neutral">Vendedor</span>
+                <p>Clientes, alquileres, contratos y reportes financieros.</p>
+            </div>
+            <div class="admin-role-row">
+                <span class="pill pill-atencion">Asistente</span>
+                <p>Recepción, inspección de devoluciones y mantenimiento.</p>
+            </div>
+        </div>
+    </aside>
+</div>

@@ -7,6 +7,12 @@
 }
 
 @functions {
+    private static readonly string[] Meses =
+        ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
+
+    private static string FechaCorta(DateTime valor) =>
+        $"{valor.Day:00} {Meses[valor.Month - 1]} {valor.Year}";
+
     private static string Moneda(decimal valor) =>
         $"S/ {valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
 }
@@ -124,7 +130,7 @@
                             <strong id="cliente-desde">
                                 @if (cliente is not null)
                                 {
-                                    @cliente.FechaRegistro.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)
+                                    @FechaCorta(cliente.FechaRegistro)
                                 }
                             </strong>
                         </div>
@@ -134,7 +140,7 @@
                         @if (cliente is not null)
                         {
                             @(cliente.ConsentimientoDatos
-                                ? $"Consentimiento de tratamiento de datos registrado · Ley N° 29733 · {cliente.FechaRegistro:dd MMM yyyy}"
+                                ? $"Consentimiento de tratamiento de datos registrado · Ley N° 29733 · {FechaCorta(cliente.FechaRegistro)}"
                                 : "Consentimiento de tratamiento de datos pendiente · no se puede emitir el contrato.")
                         }
                     </p>

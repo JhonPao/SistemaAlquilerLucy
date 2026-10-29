@@ -20,6 +20,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Alquiler> Alquileres => Set<Alquiler>();
     public DbSet<DetalleAlquiler> DetallesAlquiler => Set<DetalleAlquiler>();
     public DbSet<Devolucion> Devoluciones => Set<Devolucion>();
+    public DbSet<DetalleDevolucion> DetallesDevolucion => Set<DetalleDevolucion>();
     public DbSet<Penalidad> Penalidades => Set<Penalidad>();
     public DbSet<Mantenimiento> Mantenimientos => Set<Mantenimiento>();
     public DbSet<ConfiguracionPolitica> ConfiguracionesPolitica => Set<ConfiguracionPolitica>();
@@ -85,6 +86,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.HasIndex(d => d.IdAlquiler).IsUnique();
             entity.Property(d => d.EstadoFisicoRecepcion).HasConversion<int>();
+            entity.Property(d => d.MedioReembolso).HasMaxLength(30);
+            entity.Property(d => d.MontoReembolso).HasPrecision(10, 2);
+            entity.Property(d => d.SaldoPendiente).HasPrecision(10, 2);
 
             entity.HasOne(d => d.Alquiler)
                 .WithOne(a => a.Devolucion)
@@ -95,6 +99,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .WithMany()
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DetalleDevolucion>(entity =>
+        {
+            entity.HasIndex(d => new { d.IdDevolucion, d.IdDetalleAlquiler }).IsUnique();
+            entity.Property(d => d.EstadoFisicoRecepcion).HasConversion<int>();
+            entity.Property(d => d.CargoDanio).HasPrecision(10, 2);
+
+            entity.HasOne(d => d.Devolucion)
+                .WithMany(d => d.Detalles)
+                .HasForeignKey(d => d.IdDevolucion)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.DetalleAlquiler)
+                .WithMany()
+                .HasForeignKey(d => d.IdDetalleAlquiler)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Penalidad>(entity =>

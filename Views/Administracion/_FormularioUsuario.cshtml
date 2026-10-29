@@ -1,0 +1,71 @@
+@model UsuarioFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="notice notice-danger" role="alert"></div>
+
+@if (Model.EsEdicion)
+{
+    <input type="hidden" asp-for="Id" />
+}
+
+<div class="form-grid admin-form-grid">
+    <div class="form-field span-2">
+        <label asp-for="NombreCompleto" class="field-label">Nombre completo</label>
+        <input asp-for="NombreCompleto" class="input" autocomplete="name" placeholder="Ej. Lucía Torres" />
+        <span asp-validation-for="NombreCompleto" class="field-error"></span>
+    </div>
+
+    <div class="form-field span-2">
+        <label asp-for="Email" class="field-label">Correo electrónico</label>
+        <input asp-for="Email" class="input" type="email" autocomplete="email" placeholder="usuario@lucy.local" />
+        <span asp-validation-for="Email" class="field-error"></span>
+        <span class="field-hint">Se usará como nombre de usuario para iniciar sesión.</span>
+    </div>
+
+    <div class="form-field">
+        <label asp-for="Rol" class="field-label">Rol</label>
+        <select asp-for="Rol" class="input">
+            @foreach (var rol in Model.Roles)
+            {
+                <option value="@rol">@rol</option>
+            }
+        </select>
+        <span asp-validation-for="Rol" class="field-error"></span>
+    </div>
+
+    <div class="form-field">
+        <label class="field-label">Estado de la cuenta</label>
+        <label class="admin-check">
+            <input asp-for="Activo" />
+            <span>
+                <strong>Usuario activo</strong>
+                <small>Si se desactiva, la cuenta no podrá iniciar sesión.</small>
+            </span>
+        </label>
+        <span asp-validation-for="Activo" class="field-error"></span>
+    </div>
+
+    @if (!Model.EsEdicion)
+    {
+        <div class="form-field">
+            <label asp-for="Password" class="field-label">Contraseña inicial</label>
+            <input asp-for="Password" class="input" autocomplete="new-password" />
+            <span asp-validation-for="Password" class="field-error"></span>
+        </div>
+
+        <div class="form-field">
+            <label asp-for="ConfirmPassword" class="field-label">Confirmar contraseña</label>
+            <input asp-for="ConfirmPassword" class="input" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+        </div>
+
+        <p class="field-hint span-2">La contraseña debe tener al menos 6 caracteres e incluir un número.</p>
+    }
+</div>
+
+@if (Model.EsEdicion)
+{
+    <div class="notice notice-info admin-form-note">
+        <span class="icon icon-info"></span>
+        <span>Para cambiar la contraseña de este usuario, usa la acción <strong>Contraseña</strong> desde el listado.</span>
+    </div>
+}

@@ -1,0 +1,198 @@
+@using AlquilerVestimentasLucy.Models
+@model MantenimientoFormViewModel
+@{
+    var esEdicion = Model.EsEdicion;
+    ViewData["Title"] = esEdicion ? "Editar orden" : "Nueva orden de mantenimiento";
+    ViewData["ActiveNav"] = "mantenimiento";
+}
+
+<div class="page-head">
+    <div>
+        <a class="back-link" asp-action="Index">
+            <span class="icon icon-arrow-left icon-xs"></span>Volver a mantenimiento
+        </a>
+        <h1 class="page-title">@(esEdicion ? "Editar orden de mantenimiento" : "Nueva orden de mantenimiento")</h1>
+        <p class="page-sub">
+            @(esEdicion
+                ? "Ajusta las fechas, el servicio o el costo mientras la prenda siga en el taller."
+                : "Al registrar el ingreso, la prenda queda bloqueada hasta que confirmes su salida.")
+        </p>
+    </div>
+</div>
+
+<form class="panel form-panel maintenance-form" method="post"
+      asp-action="@(esEdicion ? "Edit" : "Create")"
+      asp-route-id="@(esEdicion ? Model.IdMantenimiento : (int?)null)">
+    <div asp-validation-summary="ModelOnly" class="notice notice-danger" role="alert"></div>
+
+    @if (esEdicion)
+    {
+        <input type="hidden" asp-for="IdMantenimiento" />
+        <input type="hidden" asp-for="IdPrenda" />
+        <input type="hidden" asp-for="Codigo" />
+        <input type="hidden" asp-for="Nombre" />
+        <input type="hidden" asp-for="Categoria" />
+        <input type="hidden" asp-for="Talla" />
+        <input type="hidden" asp-for="EstadoPrenda" />
+    }
+
+    <div class="maintenance-form-grid">
+        <div class="maintenance-form-main">
+            <div class="form-section">
+                <div class="form-section-head">
+                    <span class="form-step">01</span>
+                    <div>
+                        <h2 class="form-section-title">Prenda y servicio</h2>
+                        <p class="form-section-sub">Identifica la unidad que ingresará al taller.</p>
+                    </div>
+                </div>
+
+                @if (esEdicion)
+                {
+                    <div class="maintenance-prenda-card">
+                        <span class="prenda-code">@Model.Codigo</span>
+                        <div>
+                            <strong>@Model.Nombre</strong>
+                            <span class="cell-sub">@Model.Categoria · Talla @Model.Talla · @Model.EstadoPrenda.Etiqueta()</span>
+                        </div>
+                    </div>
+                }
+                else if (Model.Prendas.Count == 0)
+                {
+                    <div class="empty" style="margin:0 0 16px">
+                        No hay prendas disponibles para enviar a mantenimiento.
+                        <span>Finaliza una orden activa o registra la devolución de una prenda alquilada.</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="form-field">
+                        <label asp-for="IdPrenda" class="field-label">Prenda</label>
+                        <select asp-for="IdPrenda" class="input">
+                            <option value="0">Selecciona una prenda disponible</option>
+                            @foreach (var prenda in Model.Prendas)
+                            {
+                                <option value="@prenda.IdPrenda">
+                                    @prenda.Codigo · @prenda.Nombre · @prenda.Categoria / Talla @prenda.Talla
+                                </option>
+                            }
+                        </select>
+                        <span asp-validation-for="IdPrenda" class="field-error"></span>
+                    </div>
+                }
+
+                <div class="form-grid maintenance-form-row">
+                    <div class="form-field">
+                        <label asp-for="TipoServicio" class="field-label">Tipo de servicio</label>
+                        <select asp-for="TipoServicio" class="input">
+                            @foreach (var tipo in Enum.GetValues<TipoServicio>())
+                            {
+                                <option value="@((int)tipo)">@tipo.Etiqueta()</option>
+                            }
+                        </select>
+                        <span asp-validation-for="TipoServicio" class="field-error"></span>
+                    </div>
+                    <div class="form-field">
+                        <label asp-for="CostoServicio" class="field-label">Costo del servicio</label>
+                        <div class="money-input">
+                            <span>S/</span>
+                            <input asp-for="CostoServicio" type="number" step="0.01" min="0" class="input" />
+                        </div>
+                        <span asp-validation-for="CostoServicio" class="field-error"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-head">
+                    <span class="form-step">02</span>
+                    <div>
+                        <h2 class="form-section-title">Fechas del taller</h2>
+                        <p class="form-section-sub">La salida estimada te ayuda a priorizar los retrasos.</p>
+                    </div>
+                </div>
+
+                <div class="form-grid maintenance-form-row">
+                    <div class="form-field">
+                        <label asp-for="FechaIngreso" class="field-label">Ingreso</label>
+                        <input asp-for="FechaIngreso" type="datetime-local" class="input" />
+                        <span asp-validation-for="FechaIngreso" class="field-error"></span>
+                    </div>
+                    <div class="form-field">
+                        <label asp-for="FechaSalidaEstimada" class="field-label">Salida estimada</label>
+                        <input asp-for="FechaSalidaEstimada" type="datetime-local" class="input" />
+                        <span asp-validation-for="FechaSalidaEstimada" class="field-error"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-head">
+                    <span class="form-step">03</span>
+                    <div>
+                        <h2 class="form-section-title">Indicaciones</h2>
+                        <p class="form-section-sub">Describe el trabajo solicitado o el daño detectado.</p>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="Observaciones" class="field-label">Observaciones</label>
+                    <textarea asp-for="Observaciones" rows="4" class="input"
+                              placeholder="Ej. Limpieza de pollera bordada; revisar el hilvanado del ruedo."></textarea>
+                    <span asp-validation-for="Observaciones" class="field-error"></span>
+                </div>
+            </div>
+        </div>
+
+        <aside class="maintenance-form-side">
+            <div class="policy-card">
+                <div class="panel-head">
+                    <div>
+                        <h2 class="panel-title">Al guardar</h2>
+                        <p class="panel-sub">Efecto en el inventario</p>
+                    </div>
+                    <span class="icon icon-washing"></span>
+                </div>
+                <ul class="policy-list">
+                    @if (esEdicion)
+                    {
+                        <li><span class="icon icon-check"></span>La orden conserva su prenda y sigue bloqueando el inventario.</li>
+                        <li><span class="icon icon-check"></span>Puedes ajustar fechas, servicio, costo y observaciones.</li>
+                        <li><span class="icon icon-check"></span>La salida se registra desde el listado al finalizar el trabajo.</li>
+                    }
+                    else
+                    {
+                        <li><span class="icon icon-check"></span>La prenda pasa a <strong>En mantenimiento</strong>.</li>
+                        <li><span class="icon icon-check"></span>No podrá incluirse en un alquiler mientras la orden siga activa.</li>
+                        <li><span class="icon icon-check"></span>Al finalizar, volverá a estar <strong>Disponible</strong>.</li>
+                    }
+                </ul>
+            </div>
+
+            <div class="maintenance-form-note">
+                <span class="icon icon-info"></span>
+                <p>El costo es un dato operativo y no genera un cobro automático al cliente.</p>
+            </div>
+        </aside>
+    </div>
+
+    <div class="form-actions">
+        <a class="btn btn-secondary" asp-action="Index">Cancelar</a>
+        @if (Model.Prendas.Count == 0 && !esEdicion)
+        {
+            <button class="btn btn-primary" type="submit" disabled>
+                <span class="icon icon-save"></span>Registrar ingreso
+            </button>
+        }
+        else
+        {
+            <button class="btn btn-primary" type="submit">
+                <span class="icon icon-save"></span>@(esEdicion ? "Guardar cambios" : "Registrar ingreso")
+            </button>
+        }
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
