@@ -45,6 +45,7 @@ public class PrendaFormViewModel
 
     public EstadoPrenda Estado { get; set; } = EstadoPrenda.Disponible;
     public DateTime FechaRegistro { get; set; }
+    public string? RowVersion { get; set; }
 
     public Prenda AEntidad()
     {
@@ -72,7 +73,8 @@ public class PrendaFormViewModel
             PrecioAlquiler = prenda.PrecioAlquiler,
             CostoGarantia = prenda.CostoGarantia,
             Estado = prenda.Estado,
-            FechaRegistro = prenda.FechaRegistro
+            FechaRegistro = prenda.FechaRegistro,
+            RowVersion = Convert.ToBase64String(prenda.RowVersion)
         };
     }
 }
