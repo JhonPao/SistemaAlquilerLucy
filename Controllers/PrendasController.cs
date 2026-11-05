@@ -476,5 +476,9 @@ public class PrendasController : Controller
         }
 
         return $"\"{contenido}\"";
-    }
+git commit -m "Resolver conflicto conservando cambios locales"
+git push origin Feature/Mauriciogit commit -m "Resolver conflicto conservando cambios locales"
+git push origin Feature/Mauriciogit commit -m "Resolver conflicto conservando cambios locales"
+git push origin Feature/Mauriciogit commit -m "Resolver conflicto conservando cambios locales"
+git push origin Feature/Mauricio    }
 }
