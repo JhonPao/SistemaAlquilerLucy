@@ -35,6 +35,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(p => p.PrecioAlquiler).HasPrecision(10, 2);
             entity.Property(p => p.CostoGarantia).HasPrecision(10, 2);
             entity.Property(p => p.Estado).HasConversion<int>();
+            entity.Property(p => p.RowVersion).IsRowVersion().IsConcurrencyToken();
         });
 
         modelBuilder.Entity<Cliente>(entity =>

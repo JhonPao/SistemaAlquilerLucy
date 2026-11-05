@@ -474,6 +474,12 @@ namespace AlquilerVestimentasLucy.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsRowVersion()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Talla")
                         .IsRequired()
                         .HasMaxLength(10)

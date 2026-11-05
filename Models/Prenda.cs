@@ -50,6 +50,9 @@ public class Prenda
     [Display(Name = "Fecha de registro")]
     public DateTime FechaRegistro { get; set; } = DateTime.Now;
 
+    [Timestamp]
+    public byte[] RowVersion { get; set; } = [];
+
     // Navegación
     public ICollection<DetalleAlquiler> Detalles { get; set; } = new List<DetalleAlquiler>();
     public ICollection<Mantenimiento> Mantenimientos { get; set; } = new List<Mantenimiento>();

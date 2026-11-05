@@ -160,8 +160,11 @@ public class PrendasController : Controller
 
         ViewData["ClienteActual"] = await _db.DetallesAlquiler
             .AsNoTracking()
-            .Where(d => d.IdPrenda == id && d.Alquiler!.EstadoContrato == EstadoContrato.Activo)
-            .Select(d => d.Alquiler!.Cliente!.Nombres + " " + d.Alquiler!.Cliente!.Apellidos)
+            .Where(d => d.IdPrenda == id
+                && d.Alquiler != null
+                && d.Alquiler.EstadoContrato == EstadoContrato.Activo
+                && d.Alquiler.Cliente != null)
+            .Select(d => d.Alquiler!.Cliente!.Nombres + " " + d.Alquiler.Cliente.Apellidos)
             .FirstOrDefaultAsync();
 
         return View(prenda);
@@ -180,7 +183,13 @@ public class PrendasController : Controller
     public async Task<IActionResult> Create(PrendaFormViewModel modelo)
     {
         Normalizar(modelo);
-        await ValidarCodigoUnicoAsync(modelo.CodigoUnico, null);
+        ModelState.Clear();
+        TryValidateModel(modelo);
+
+        if (ModelState.IsValid)
+        {
+            await ValidarCodigoUnicoAsync(modelo.CodigoUnico, null);
+        }
 
         if (!ModelState.IsValid)
         {
@@ -190,10 +199,20 @@ public class PrendasController : Controller
         var prenda = modelo.AEntidad();
         prenda.Estado = EstadoPrenda.Disponible;
         prenda.Activo = true;
-        prenda.FechaRegistro = DateTime.Now;
+        prenda.FechaRegistro = DateTime.UtcNow;
 
         _db.Prendas.Add(prenda);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(ex, "No se pudo registrar la prenda {CodigoUnico}.", prenda.CodigoUnico);
+            ModelState.AddModelError(nameof(modelo.CodigoUnico),
+                "No se pudo registrar la prenda. Es posible que el código ya exista.");
+            return View(modelo);
+        }
 
         _logger.LogInformation("Prenda {Codigo} registrada por {Usuario}.", prenda.CodigoUnico, User.Identity?.Name);
         TempData["Exito"] = $"La prenda {prenda.CodigoUnico} se registró correctamente y está disponible para alquiler.";
@@ -220,7 +239,19 @@ public class PrendasController : Controller
         }
 
         Normalizar(modelo);
-        await ValidarCodigoUnicoAsync(modelo.CodigoUnico, id);
+        ModelState.Clear();
+        TryValidateModel(modelo);
+
+        if (string.IsNullOrWhiteSpace(modelo.RowVersion))
+        {
+            ModelState.AddModelError(nameof(modelo.RowVersion),
+                "La versión de la prenda no está disponible. Recargue la página.");
+        }
+
+        if (ModelState.IsValid)
+        {
+            await ValidarCodigoUnicoAsync(modelo.CodigoUnico, id);
+        }
 
         if (!ModelState.IsValid)
         {
@@ -237,7 +268,36 @@ public class PrendasController : Controller
         actual.PrecioAlquiler = modelo.PrecioAlquiler ?? 0m;
         actual.CostoGarantia = modelo.CostoGarantia ?? 0m;
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            _db.Entry(actual).Property(p => p.RowVersion).OriginalValue =
+                Convert.FromBase64String(modelo.RowVersion!);
+        }
+        catch (FormatException)
+        {
+            ModelState.AddModelError(nameof(modelo.RowVersion),
+                "La versión de la prenda no es válida. Recargue la página.");
+            return View(modelo);
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex, "Conflicto al editar la prenda {IdPrenda}.", id);
+            ModelState.AddModelError(string.Empty,
+                "La prenda fue modificada por otro usuario. Recargue la página e inténtelo nuevamente.");
+            return View(modelo);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(ex, "No se pudo actualizar la prenda {IdPrenda}.", id);
+            ModelState.AddModelError(nameof(modelo.CodigoUnico),
+                "No se pudo actualizar la prenda. Es posible que el código ya exista.");
+            return View(modelo);
+        }
 
         TempData["Exito"] = $"La ficha de {actual.CodigoUnico} se actualizó correctamente.";
         return RedirectToAction(nameof(Details), new { id });
@@ -267,7 +327,16 @@ public class PrendasController : Controller
         }
 
         prenda.Estado = EstadoPrenda.DeBaja;
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex, "Conflicto al dar de baja la prenda {IdPrenda}.", id);
+            TempData["Error"] = "La prenda fue modificada por otro usuario. Recargue la página e inténtelo nuevamente.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
         _logger.LogInformation("Prenda {Codigo} dada de baja por {Usuario}.", prenda.CodigoUnico, User.Identity?.Name);
         TempData["Exito"] = $"La prenda {prenda.CodigoUnico} quedó de baja y conserva todo su historial.";
@@ -292,13 +361,23 @@ public class PrendasController : Controller
         }
 
         prenda.Estado = EstadoPrenda.Disponible;
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex, "Conflicto al reactivar la prenda {IdPrenda}.", id);
+            TempData["Error"] = "La prenda fue modificada por otro usuario. Recargue la página e inténtelo nuevamente.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
         TempData["Exito"] = $"La prenda {prenda.CodigoUnico} volvió a estar disponible.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpGet]
+    [Authorize(Roles = DbInitializer.RolAdministradora)]
     public async Task<IActionResult> Exportar(string? q, EstadoPrenda? estado, string? categoria, string? talla)
     {
         var filas = await ConstruirFiltro(q, estado, categoria, talla)
@@ -311,17 +390,17 @@ public class PrendasController : Controller
         foreach (var prenda in filas)
         {
             contenido.AppendLine(string.Join(';',
-                prenda.CodigoUnico,
-                Limpiar(prenda.Nombre),
-                Limpiar(prenda.Categoria),
-                Limpiar(prenda.Talla),
+                EscaparCsv(prenda.CodigoUnico),
+                EscaparCsv(prenda.Nombre),
+                EscaparCsv(prenda.Categoria),
+                EscaparCsv(prenda.Talla),
                 prenda.PrecioAlquiler.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
                 prenda.CostoGarantia.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
-                prenda.Estado.Etiqueta()));
+                EscaparCsv(prenda.Estado.Etiqueta())));
         }
 
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(contenido.ToString())).ToArray();
-        return File(bytes, "text/csv; charset=utf-8", $"inventario-lucyvest-{DateTime.Now:yyyyMMdd}.csv");
+        return File(bytes, "text/csv; charset=utf-8", $"inventario-lucyvest-{DateTime.UtcNow:yyyyMMdd}.csv");
     }
 
     private IQueryable<Prenda> ConstruirFiltro(string? q, EstadoPrenda? estado, string? categoria, string? talla)
@@ -344,12 +423,14 @@ public class PrendasController : Controller
 
         if (!string.IsNullOrWhiteSpace(categoria))
         {
-            query = query.Where(p => p.Categoria == categoria);
+            var categoriaNormalizada = categoria.Trim();
+            query = query.Where(p => p.Categoria == categoriaNormalizada);
         }
 
         if (!string.IsNullOrWhiteSpace(talla))
         {
-            query = query.Where(p => p.Talla == talla);
+            var tallaNormalizada = talla.Trim();
+            query = query.Where(p => p.Talla == tallaNormalizada);
         }
 
         return query;
@@ -381,5 +462,15 @@ public class PrendasController : Controller
             ? info
             : ("Prendas del taller", null);
 
-    private static string Limpiar(string valor) => valor.Replace(';', ',').Replace('\n', ' ').Trim();
+    private static string EscaparCsv(string valor)
+    {
+        var contenido = valor
+            .Replace("\"", "\"\"")
+            .Replace("\r", " ")
+            .Replace("\n", " ")
+            .Trim();
+
+        return $"\"
+contenido}\"";
+    }
 }
