@@ -256,6 +256,8 @@ AlquilerVestimentasLucy/
 ## 👥 Equipo de Desarrollo
 
 * **Jhon Paolo** — *Diseño de Arquitectura, Modelado de Datos y Desarrollo Backend*
+* **Mauricio Marin** — *Diseño de Arquitectura, Modelado de Datos y Desarrollo Backend*
+* **Jhony Fabricio** — *Diseño de Arquitectura, Modelado de Datos y Desarrollo Backend*
 * **Curso:** Diseño y Arquitectura de Software (DIARS) · 2026-2
 * **Institución:** Universidad Privada del Norte (UPN - Sede Cajamarca)
 
