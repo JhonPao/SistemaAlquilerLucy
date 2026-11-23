@@ -47,8 +47,8 @@ public class ReglasNegocioService : IReglasNegocioService
 
         // RNC01: cada bloque de 24 horas iniciado desde la hora pactada cuenta
         // como un día de mora, aunque el retorno ocurra minutos después del vencimiento.
-        var horas = (fechaReal - fechaPactada).TotalHours;
-        return (int)Math.Ceiling(horas / 24d);
+        var horasTranscurridas = (fechaReal - fechaPactada).TotalHours;
+        return (int)Math.Ceiling(horasTranscurridas / 24d);
     }
 
     public decimal CalcularCargoDanio(
@@ -57,7 +57,7 @@ public class ReglasNegocioService : IReglasNegocioService
     {
         ArgumentNullException.ThrowIfNull(politica);
 
-        var cargo = estadoFisico switch
+        var montoCargo = estadoFisico switch
         {
             EstadoFisicoRecepcion.DanioLeve =>
                 politica.CostoBaseReparacion * politica.PorcentajeDanioLeve,
@@ -66,7 +66,7 @@ public class ReglasNegocioService : IReglasNegocioService
             _ => 0m
         };
 
-        return Math.Round(cargo, 2, MidpointRounding.AwayFromZero);
+        return Math.Round(montoCargo, 2, MidpointRounding.AwayFromZero);
     }
 
     public ResultadoLiquidacion CalcularLiquidacion(
@@ -86,19 +86,19 @@ public class ReglasNegocioService : IReglasNegocioService
         ArgumentNullException.ThrowIfNull(estadosFisicos);
 
         // RNC01: penalidad por mora diaria.
-        var diasRetraso = CalcularDiasRetraso(fechaPactada, fechaReal);
-        var montoMora = diasRetraso * politica.TarifaMoraDiaria;
+        var diasDeRetraso = CalcularDiasRetraso(fechaPactada, fechaReal);
+        var montoPorMora = diasDeRetraso * politica.TarifaMoraDiaria;
 
         // RNC02: penalidad por deterioro físico, calculada por cada prenda.
-        var montoDanio = estadosFisicos.Sum(estado =>
-            CalcularCargoDanio(estado, politica));
+        var montoPorDanio = estadosFisicos.Sum(estadoRecepcion =>
+            CalcularCargoDanio(estadoRecepcion, politica));
 
         return new ResultadoLiquidacion(
-            DiasRetraso: diasRetraso,
+            DiasRetraso: diasDeRetraso,
             TarifaMoraAplicada: politica.TarifaMoraDiaria,
-            MontoMora: montoMora,
+            MontoMora: montoPorMora,
             CostoBaseAplicado: politica.CostoBaseReparacion,
-            MontoDanio: montoDanio,
-            TotalPenalidad: montoMora + montoDanio);
+            MontoDanio: montoPorDanio,
+            TotalPenalidad: montoPorMora + montoPorDanio);
     }
 }
