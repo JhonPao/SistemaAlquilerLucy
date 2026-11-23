@@ -2,20 +2,19 @@
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 @{
-    var usuario = User.Identity?.IsAuthenticated == true ? await UserManager.GetUserAsync(User) : null;
-    var nombreCompleto = usuario?.NombreCompleto ?? User.Identity?.Name ?? string.Empty;
-    var partes = nombreCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-    var primerNombre = partes.Length > 0 ? partes[0] : nombreCompleto;
-    var iniciales = partes.Length > 1
-        ? $"{partes[0][0]}{partes[1][0]}".ToUpper()
-        : (partes.Length == 1 ? partes[0][..1].ToUpper() : "?");
-    var rol = User.IsInRole("Administradora") ? "Administradora"
+    var usuarioActual = User.Identity?.IsAuthenticated == true ? await UserManager.GetUserAsync(User) : null;
+    var nombreMostrado = usuarioActual?.NombreCompleto ?? User.Identity?.Name ?? string.Empty;
+    var partesNombre = nombreMostrado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    var inicialesUsuario = partesNombre.Length > 1
+        ? $"{partesNombre[0][0]}{partesNombre[1][0]}".ToUpper()
+        : (partesNombre.Length == 1 ? partesNombre[0][..1].ToUpper() : "?");
+    var rolMostrado = User.IsInRole("Administradora") ? "Administradora"
         : User.IsInRole("Vendedor") ? "Vendedor"
         : User.IsInRole("Asistente") ? "Asistente"
         : "Usuario";
-    var activo = ViewData["ActiveNav"] as string ?? string.Empty;
-    var meses = new[] { "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic" };
-    var hoy = $"{DateTime.Now.Day:00} {meses[DateTime.Now.Month - 1]} {DateTime.Now.Year}";
+    var seccionActiva = ViewData["ActiveNav"] as string ?? string.Empty;
+    var mesesCortos = new[] { "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic" };
+    var fechaCabecera = $"{DateTime.Now.Day:00} {mesesCortos[DateTime.Now.Month - 1]} {DateTime.Now.Year}";
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -39,39 +38,39 @@
             </a>
 
             <div class="sede">
-                <strong>Taller principal</strong>
+                <strong>Taller central</strong>
                 <span>Lima, Perú · S/</span>
             </div>
 
             <nav class="nav">
                 <span class="nav-group">Gestión del taller</span>
-                <a class="nav-item @(activo == "panel" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                <a class="nav-item @(seccionActiva == "panel" ? "active" : "")" asp-controller="Home" asp-action="Index">
                     <span class="icon icon-dashboard"></span>Panel general
                 </a>
-                <a class="nav-item @(activo == "prendas" ? "active" : "")" asp-controller="Prendas" asp-action="Index">
+                <a class="nav-item @(seccionActiva == "prendas" ? "active" : "")" asp-controller="Prendas" asp-action="Index">
                     <span class="icon icon-shirt"></span>Inventario
                 </a>
-                <a class="nav-item @(activo == "clientes" ? "active" : "")" asp-controller="Clientes" asp-action="Index">
+                <a class="nav-item @(seccionActiva == "clientes" ? "active" : "")" asp-controller="Clientes" asp-action="Index">
                     <span class="icon icon-users"></span>Clientes
                 </a>
-                <a class="nav-item @(activo == "alquileres" ? "active" : "")" asp-controller="Alquileres" asp-action="Index">
+                <a class="nav-item @(seccionActiva == "alquileres" ? "active" : "")" asp-controller="Alquileres" asp-action="Index">
                     <span class="icon icon-file-text"></span>Alquileres
                 </a>
-                <a class="nav-item @(activo == "devoluciones" ? "active" : "")" asp-controller="Devoluciones" asp-action="Index">
+                <a class="nav-item @(seccionActiva == "devoluciones" ? "active" : "")" asp-controller="Devoluciones" asp-action="Index">
                     <span class="icon icon-package-check"></span>Devoluciones
                 </a>
-                <a class="nav-item @(activo == "mantenimiento" ? "active" : "")" asp-controller="Mantenimientos" asp-action="Index">
+                <a class="nav-item @(seccionActiva == "mantenimiento" ? "active" : "")" asp-controller="Mantenimientos" asp-action="Index">
                     <span class="icon icon-washing"></span>Mantenimiento
                 </a>
                 @if (User.IsInRole("Administradora") || User.IsInRole("Vendedor"))
                 {
-                    <a class="nav-item @(activo == "reportes" ? "active" : "")" asp-controller="Reportes" asp-action="Index">
+                    <a class="nav-item @(seccionActiva == "reportes" ? "active" : "")" asp-controller="Reportes" asp-action="Index">
                         <span class="icon icon-chart"></span>Reportes y auditoría
                     </a>
                 }
                 @if (User.IsInRole("Administradora"))
                 {
-                    <a class="nav-item @(activo == "administracion" ? "active" : "")" asp-controller="Administracion" asp-action="Index">
+                    <a class="nav-item @(seccionActiva == "administracion" ? "active" : "")" asp-controller="Administracion" asp-action="Index">
                         <span class="icon icon-settings"></span>Administración
                     </a>
                 }
@@ -79,16 +78,16 @@
 
             <div class="sidebar-note">
                 <span class="icon icon-sparkles"></span>
-                <p class="sidebar-note-title">Cada prenda, una historia.</p>
-                <p class="sidebar-note-body">Cuidamos los detalles de cada alquiler.</p>
+                <p class="sidebar-note-title">Cada prenda cuenta una historia.</p>
+                <p class="sidebar-note-body">Cuidamos cada detalle de tu alquiler.</p>
             </div>
 
             <div class="sidebar-account">
                 <div class="account">
-                    <span class="avatar">@iniciales</span>
+                    <span class="avatar">@inicialesUsuario</span>
                     <span>
-                        <strong>@nombreCompleto</strong>
-                        <small>@rol</small>
+                        <strong>@nombreMostrado</strong>
+                        <small>@rolMostrado</small>
                     </span>
                 </div>
                 <form asp-controller="Account" asp-action="Logout" method="post">
@@ -121,8 +120,8 @@
                     </nav>
                 </div>
                 <div class="topbar-right">
-                    <span class="demo-badge">Datos de demostración</span>
-                    <span class="today">@hoy</span>
+                    <span class="demo-badge">Datos de ejemplo</span>
+                    <span class="today">@fechaCabecera</span>
                     <button type="button" class="icon-btn" aria-label="Notificaciones">
                         <span class="icon icon-bell"></span>
                     </button>
@@ -132,8 +131,8 @@
             <main class="page">
                 @RenderBody()
                 <footer class="page-foot">
-                    <span>LucyVest Control · Gestión de vestuario</span>
-                    <span>Entorno de demostración · Perú</span>
+                    <span>LucyVest Control · Administración de vestuario</span>
+                    <span>Ambiente de demostración · Perú</span>
                 </footer>
             </main>
         </div>
