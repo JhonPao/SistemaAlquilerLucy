@@ -170,7 +170,7 @@ public class AlquileresController : Controller
             EstadoTab = estadoTab,
             Desde = desdeFecha,
             Hasta = hastaFecha,
-            KpiVigentes = abiertos.Count,
+            KpiVigentes = abiertos.Count - vencidos.Count,
             KpiPendientes = abiertos.Count,
             KpiVencidos = vencidos.Count,
             KpiDevueltos = devueltos.Count,
@@ -179,7 +179,7 @@ public class AlquileresController : Controller
             TarifaMora = politica?.TarifaMoraDiaria ?? 0m,
             Alerta = alertaVm,
             ConteoTodos = conteoTodos,
-            ConteoVigentes = conteoAbiertos,
+            ConteoVigentes = conteoAbiertos - conteoVencidos,
             ConteoPendientes = conteoAbiertos,
             ConteoVencidos = conteoVencidos,
             ConteoDevueltos = conteoDevueltos,
@@ -806,7 +806,10 @@ public class AlquileresController : Controller
         string estado,
         DateTime hoy) => estado switch
     {
-        "vigentes" or "pendientes" => consulta.Where(a => a.EstadoContrato != EstadoContrato.Cerrado),
+        "vigentes" => consulta.Where(a =>
+            a.EstadoContrato != EstadoContrato.Cerrado &&
+            a.FechaDevolucionPactada.Date >= hoy),
+        "pendientes" => consulta.Where(a => a.EstadoContrato != EstadoContrato.Cerrado),
         "vencidos" => consulta.Where(a =>
             a.EstadoContrato != EstadoContrato.Cerrado &&
             a.FechaDevolucionPactada.Date < hoy),

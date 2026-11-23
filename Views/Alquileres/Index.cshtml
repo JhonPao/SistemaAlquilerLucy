@@ -61,11 +61,7 @@
     <article class="kpi">
         <span class="kpi-label">Vigentes</span>
         <span class="kpi-value">@Model.KpiVigentes</span>
-        <span class="kpi-foot">
-            @(Model.KpiVencidos > 0
-                ? $"Incluye {Model.KpiVencidos} {(Model.KpiVencidos == 1 ? "contrato vencido" : "contratos vencidos")}"
-                : "Sin contratos vencidos")
-        </span>
+        <span class="kpi-foot">Contratos abiertos dentro del plazo</span>
     </article>
     <article class="kpi">
         <span class="kpi-label">Pendientes de devolución</span>
