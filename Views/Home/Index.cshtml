@@ -11,8 +11,8 @@
 }
 <div class="page-head">
     <div>
-        <h1 class="page-title">Un día en orden, @Model.Nombre</h1>
-        <p class="page-sub">@fechaHoy · Revisa lo que necesita atención en el taller.</p>
+        <h1 class="page-title">Todo bajo control, @Model.Nombre</h1>
+        <p class="page-sub">@fechaHoy · Revisa lo que requiere atención en el taller.</p>
     </div>
     <a class="btn btn-primary" asp-controller="Alquileres" asp-action="Create">
         <span class="icon icon-plus"></span>Nuevo alquiler
@@ -21,17 +21,17 @@
 
 <div class="kpi-grid">
     <article class="kpi">
-        <span class="kpi-label">Contratos vigentes</span>
+        <span class="kpi-label">Contratos activos</span>
         <span class="kpi-value">@Model.ContratosVigentes</span>
-        <span class="kpi-foot">@Model.PrendasFueraDelTaller prendas fuera del taller</span>
+        <span class="kpi-foot">@Model.PrendasFueraDelTaller prendas en circulación</span>
     </article>
     <article class="kpi">
-        <span class="kpi-label">Devoluciones de hoy</span>
+        <span class="kpi-label">Devoluciones del día</span>
         <span class="kpi-value">@Model.DevolucionesHoy</span>
-        <span class="kpi-foot">Registradas durante la jornada</span>
+        <span class="kpi-foot">Registradas en la jornada</span>
     </article>
     <article class="kpi">
-        <span class="kpi-label">Vencidos con mora activa</span>
+        <span class="kpi-label">Contratos vencidos con mora</span>
         <span class="kpi-value">@Model.VencidosConMora</span>
         <span class="kpi-foot">Tarifa de S/ @Model.TarifaMoraDiaria.ToString("0.00", CultureInfo.InvariantCulture) por día</span>
     </article>
@@ -46,10 +46,10 @@
     <section class="panel">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Próximas devoluciones</h2>
-                <p class="panel-sub">Ordenadas por fecha pactada de retorno</p>
+                <h2 class="panel-title">Próximos retornos</h2>
+                <p class="panel-sub">Ordenados por fecha pactada</p>
             </div>
-            <a class="panel-link" asp-controller="Devoluciones" asp-action="Index">Ver devoluciones</a>
+            <a class="panel-link" asp-controller="Devoluciones" asp-action="Index">Ver todos</a>
         </div>
 
         @if (Model.ProximasDevoluciones.Count == 0)
@@ -61,8 +61,8 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Contrato / cliente</th>
-                        <th>Retorno pactado</th>
+                        <th>Contrato y cliente</th>
+                        <th>Fecha de retorno</th>
                         <th class="center">Prendas</th>
                         <th>Estado</th>
                     </tr>
@@ -109,31 +109,31 @@
     <aside class="panel">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Alertas del taller</h2>
+                <h2 class="panel-title">Avisos del taller</h2>
             </div>
             @if (Model.EnMantenimiento > 0 || Model.VencidosConMora > 0)
             {
-                <span class="pill pill-atencion">Requiere atención</span>
+                <span class="pill pill-atencion">Necesita atención</span>
             }
             else
             {
-                <span class="pill pill-completado">Todo en orden</span>
+                <span class="pill pill-completado">Sin alertas</span>
             }
         </div>
 
         @if (Model.EnMantenimiento > 0)
         {
             <div>
-                <p class="strong">@(Model.EnMantenimiento == 1 ? "Una prenda sigue en servicio" : $"{Model.EnMantenimiento} prendas siguen en servicio")</p>
+                <p class="strong">@(Model.EnMantenimiento == 1 ? "Una prenda sigue en mantenimiento" : $"{Model.EnMantenimiento} prendas siguen en mantenimiento")</p>
                 <p class="panel-sub" style="margin-top:6px">Las prendas en mantenimiento están bloqueadas para el catálogo de alquiler hasta registrar su salida.</p>
-                <a class="panel-link" style="margin-top:10px" asp-controller="Mantenimientos" asp-action="Index">Abrir mantenimiento <span class="icon icon-chevron-right icon-xs"></span></a>
+                <a class="panel-link" style="margin-top:10px" asp-controller="Mantenimientos" asp-action="Index">Ir a mantenimiento <span class="icon icon-chevron-right icon-xs"></span></a>
             </div>
         }
         else
         {
             <div>
                 <p class="strong">Sin prendas en mantenimiento</p>
-                <p class="panel-sub" style="margin-top:6px">No hay órdenes de lavandería, costura o desinfección en curso.</p>
+                <p class="panel-sub" style="margin-top:6px">No hay órdenes de lavado, costura o desinfección activas.</p>
             </div>
         }
 
@@ -144,7 +144,7 @@
             <div>
                 <p class="strong">Contratos con mora activa</p>
                 <p class="panel-sub" style="margin-top:6px">@Model.VencidosConMora @(Model.VencidosConMora == 1 ? "contrato superó" : "contratos superaron") la fecha pactada de devolución.</p>
-                <a class="panel-link" style="margin-top:10px" asp-controller="Reportes" asp-action="Index">Revisar reportes <span class="icon icon-chevron-right icon-xs"></span></a>
+                <a class="panel-link" style="margin-top:10px" asp-controller="Reportes" asp-action="Index">Ver reportes <span class="icon icon-chevron-right icon-xs"></span></a>
             </div>
         }
         else
@@ -161,7 +161,7 @@
     <section class="panel">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Estado del vestuario</h2>
+                <h2 class="panel-title">Estado del inventario</h2>
                 <p class="panel-sub">@Model.TotalPrendas @(Model.TotalPrendas == 1 ? "unidad física registrada" : "unidades físicas registradas")</p>
             </div>
         </div>
@@ -209,7 +209,7 @@
         }
 
         <div class="panel-foot">
-            <span>Respaldo de base de datos</span>
+            <span>Copia de seguridad de la base de datos</span>
             <span class="pill pill-neutral">Pendiente de configurar</span>
         </div>
     </section>
