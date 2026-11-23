@@ -31,17 +31,17 @@ public class HomeController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var hoy = DateTime.Today;
-        var usuario = await _userManager.GetUserAsync(User);
-        var nombreCompleto = usuario?.NombreCompleto ?? User.Identity?.Name ?? string.Empty;
-        var primerNombre = nombreCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? nombreCompleto;
+        var fechaActual = DateTime.Today;
+        var usuarioActual = await _userManager.GetUserAsync(User);
+        var nombreDelUsuario = usuarioActual?.NombreCompleto ?? User.Identity?.Name ?? string.Empty;
+        var nombrePila = nombreDelUsuario.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? nombreDelUsuario;
 
-        var politica = await _db.ConfiguracionesPolitica
+        var configuracionVigente = await _db.ConfiguracionesPolitica
             .AsNoTracking()
             .OrderBy(c => c.IdConfiguracion)
             .FirstOrDefaultAsync();
 
-        var alquileresActivos = await _db.Alquileres
+        var contratosActivos = await _db.Alquileres
             .AsNoTracking()
             .Include(a => a.Cliente)
             .Include(a => a.Detalles)
@@ -49,32 +49,32 @@ public class HomeController : Controller
             .OrderBy(a => a.FechaDevolucionPactada)
             .ToListAsync();
 
-        var prendasPorEstado = await _db.Prendas
+        var resumenPrendas = await _db.Prendas
             .AsNoTracking()
             .Where(p => p.Activo)
             .GroupBy(p => p.Estado)
             .Select(g => new { Estado = g.Key, Total = g.Count() })
             .ToListAsync();
 
-        int Contar(EstadoPrenda estado) => prendasPorEstado.FirstOrDefault(x => x.Estado == estado)?.Total ?? 0;
+        int ContarPorEstado(EstadoPrenda estado) => resumenPrendas.FirstOrDefault(x => x.Estado == estado)?.Total ?? 0;
 
-        var devolucionesHoy = await _db.Devoluciones
+        var devolucionesDelDia = await _db.Devoluciones
             .AsNoTracking()
-            .CountAsync(d => d.FechaDevolucionReal >= hoy && d.FechaDevolucionReal < hoy.AddDays(1));
+            .CountAsync(d => d.FechaDevolucionReal >= fechaActual && d.FechaDevolucionReal < fechaActual.AddDays(1));
 
-        var modelo = new DashboardViewModel
+        var panel = new DashboardViewModel
         {
-            Nombre = primerNombre,
-            ContratosVigentes = alquileresActivos.Count,
-            DevolucionesHoy = devolucionesHoy,
-            VencidosConMora = alquileresActivos.Count(a => a.FechaDevolucionPactada.Date < hoy),
-            PrendasDisponibles = Contar(EstadoPrenda.Disponible),
-            TotalPrendas = prendasPorEstado.Sum(x => x.Total),
-            Alquiladas = Contar(EstadoPrenda.Alquilada),
-            EnMantenimiento = Contar(EstadoPrenda.EnMantenimiento),
-            DeBaja = Contar(EstadoPrenda.DeBaja),
-            TarifaMoraDiaria = politica?.TarifaMoraDiaria ?? 0m,
-            ProximasDevoluciones = alquileresActivos
+            Nombre = nombrePila,
+            ContratosVigentes = contratosActivos.Count,
+            DevolucionesHoy = devolucionesDelDia,
+            VencidosConMora = contratosActivos.Count(a => a.FechaDevolucionPactada.Date < fechaActual),
+            PrendasDisponibles = ContarPorEstado(EstadoPrenda.Disponible),
+            TotalPrendas = resumenPrendas.Sum(x => x.Total),
+            Alquiladas = ContarPorEstado(EstadoPrenda.Alquilada),
+            EnMantenimiento = ContarPorEstado(EstadoPrenda.EnMantenimiento),
+            DeBaja = ContarPorEstado(EstadoPrenda.DeBaja),
+            TarifaMoraDiaria = configuracionVigente?.TarifaMoraDiaria ?? 0m,
+            ProximasDevoluciones = contratosActivos
                 .Take(3)
                 .Select(a => new ProximaDevolucionViewModel
                 {
@@ -83,56 +83,56 @@ public class HomeController : Controller
                     Cliente = a.Cliente?.NombreCompleto ?? "Sin cliente",
                     FechaPactada = a.FechaDevolucionPactada,
                     CantidadPrendas = a.Detalles.Count,
-                    Vencido = a.FechaDevolucionPactada.Date < hoy
+                    Vencido = a.FechaDevolucionPactada.Date < fechaActual
                 })
                 .ToList()
         };
 
-        modelo.ActividadReciente = await ObtenerActividadRecienteAsync();
+        panel.ActividadReciente = await ObtenerActividadRecienteAsync();
 
-        return View(modelo);
+        return View(panel);
     }
 
     private async Task<List<ActividadViewModel>> ObtenerActividadRecienteAsync()
     {
-        var movimientos = new List<(DateTime Fecha, string Movimiento, string Responsable)>();
+        var registrosActividad = new List<(DateTime Fecha, string Movimiento, string Responsable)>();
 
-        var ultimosAlquileres = await _db.Alquileres
+        var alquileresRecientes = await _db.Alquileres
             .AsNoTracking()
             .Include(a => a.Usuario)
             .OrderByDescending(a => a.FechaAlquiler)
             .Take(3)
             .ToListAsync();
 
-        movimientos.AddRange(ultimosAlquileres.Select(a => (
+        registrosActividad.AddRange(alquileresRecientes.Select(a => (
             a.FechaAlquiler,
             $"Contrato LV-{a.IdAlquiler:D4} confirmado",
             a.Usuario?.NombreCompleto ?? "Sistema")));
 
-        var ultimosMantenimientos = await _db.Mantenimientos
+        var mantenimientosRecientes = await _db.Mantenimientos
             .AsNoTracking()
             .Include(m => m.Prenda)
             .OrderByDescending(m => m.FechaIngreso)
             .Take(2)
             .ToListAsync();
 
-        movimientos.AddRange(ultimosMantenimientos.Select(m => (
+        registrosActividad.AddRange(mantenimientosRecientes.Select(m => (
             m.FechaIngreso,
             $"Ingreso de {m.Prenda?.CodigoUnico ?? "prenda"} a mantenimiento",
             "Asistente")));
 
-        var ultimasDevoluciones = await _db.Devoluciones
+        var devolucionesRecientes = await _db.Devoluciones
             .AsNoTracking()
             .OrderByDescending(d => d.FechaDevolucionReal)
             .Take(2)
             .ToListAsync();
 
-        movimientos.AddRange(ultimasDevoluciones.Select(d => (
+        registrosActividad.AddRange(devolucionesRecientes.Select(d => (
             d.FechaDevolucionReal,
             $"Devolución del contrato LV-{d.IdAlquiler:D4}",
             "Recepción")));
 
-        return movimientos
+        return registrosActividad
             .OrderByDescending(m => m.Fecha)
             .Take(3)
             .Select(m => new ActividadViewModel
@@ -144,15 +144,15 @@ public class HomeController : Controller
             .ToList();
     }
 
-    private static string FormatearMomento(DateTime fecha)
+    private static string FormatearMomento(DateTime momento)
     {
-        var dias = (DateTime.Today - fecha.Date).Days;
+        var diasTranscurridos = (DateTime.Today - momento.Date).Days;
 
-        return dias switch
+        return diasTranscurridos switch
         {
-            0 => fecha.ToString("HH:mm"),
-            1 => $"Ayer {fecha:HH:mm}",
-            _ => fecha.ToString("dd MMM · HH:mm")
+            0 => momento.ToString("HH:mm"),
+            1 => $"Ayer {momento:HH:mm}",
+            _ => momento.ToString("dd MMM · HH:mm")
         };
     }
 
