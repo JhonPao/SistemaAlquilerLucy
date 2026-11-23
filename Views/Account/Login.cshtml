@@ -32,7 +32,7 @@
                 <h1 class="auth-headline">El arte de vestir.<br />La calma de tener<br />todo en orden.</h1>
                 <p class="auth-copy">Tu inventario, tus clientes y cada alquiler,<br />en un mismo lugar.</p>
                 <div class="auth-editorial-foot">
-                    <span>Hecho para tu taller</span>
+                    <span>Diseñado para tu taller</span>
                     <span>Lima, Perú</span>
                 </div>
             </div>
@@ -46,8 +46,8 @@
 
             <form class="auth-form" asp-controller="Account" asp-action="Login" method="post">
                 <div class="auth-welcome">
-                    <h2 class="auth-title">Bienvenida de nuevo</h2>
-                    <p class="auth-sub">Ingresa con tu cuenta del taller para continuar.</p>
+                    <h2 class="auth-title">Qué bueno verte de nuevo</h2>
+                    <p class="auth-sub">Accede con tu cuenta del taller para continuar.</p>
                 </div>
 
                 <div asp-validation-summary="ModelOnly" class="notice notice-danger" role="alert"></div>
@@ -59,7 +59,7 @@
                     <label asp-for="Usuario"></label>
                     <input asp-for="Usuario" class="input" placeholder="lucia.torres" autocomplete="username" autofocus />
                     <span asp-validation-for="Usuario" class="field-error"></span>
-                    <span class="field-hint">Utiliza el usuario asignado por tu administradora.</span>
+                    <span class="field-hint">Usa el usuario asignado por tu administradora.</span>
                 </div>
 
                 <div class="field">
@@ -74,17 +74,17 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block auth-submit">
-                    Ingresar a LucyVest
+                    Entrar a LucyVest
                     <span class="icon icon-arrow-right" aria-hidden="true"></span>
                 </button>
 
-                <p class="auth-help">¿No puedes ingresar? Contacta a la administradora de tu taller para restablecer tu acceso.</p>
+                <p class="auth-help">¿Problemas para acceder? Contacta a la administradora de tu taller para restablecer tu acceso.</p>
 
                 <div class="auth-divider"></div>
 
                 <div class="auth-note">
                     <span class="icon icon-lock" aria-hidden="true"></span>
-                    <span>Acceso autorizado para Administradora, Vendedor y Asistente. Tus permisos se aplican al iniciar sesión.</span>
+                    <span>Acceso autorizado para Administradora, Vendedor y Asistente. Los permisos se aplican al iniciar sesión.</span>
                 </div>
             </form>
 
