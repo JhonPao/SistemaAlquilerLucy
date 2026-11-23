@@ -16,7 +16,7 @@
         <p class="page-sub">@Model.CodigoUnico · @Model.Categoria · Talla @Model.Talla</p>
     </div>
 
-    @if (User.IsInRole("Administradora"))
+    @if (User.IsInRole(DbInitializer.RolAdministradora))
     {
         <div class="head-actions">
             <a class="btn btn-secondary" asp-action="Edit" asp-route-id="@Model.IdPrenda">

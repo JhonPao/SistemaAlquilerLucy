@@ -8,9 +8,9 @@
     var inicialesUsuario = partesNombre.Length > 1
         ? $"{partesNombre[0][0]}{partesNombre[1][0]}".ToUpper()
         : (partesNombre.Length == 1 ? partesNombre[0][..1].ToUpper() : "?");
-    var rolMostrado = User.IsInRole("Administradora") ? "Administradora"
-        : User.IsInRole("Vendedor") ? "Vendedor"
-        : User.IsInRole("Asistente") ? "Asistente"
+    var rolMostrado = User.IsInRole(DbInitializer.RolAdministradora) ? DbInitializer.RolAdministradora
+        : User.IsInRole(DbInitializer.RolVendedor) ? DbInitializer.RolVendedor
+        : User.IsInRole(DbInitializer.RolAsistente) ? DbInitializer.RolAsistente
         : "Usuario";
     var seccionActiva = ViewData["ActiveNav"] as string ?? string.Empty;
     var mesesCortos = new[] { "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic" };
@@ -62,13 +62,13 @@
                 <a class="nav-item @(seccionActiva == "mantenimiento" ? "active" : "")" asp-controller="Mantenimientos" asp-action="Index">
                     <span class="icon icon-washing"></span>Mantenimiento
                 </a>
-                @if (User.IsInRole("Administradora") || User.IsInRole("Vendedor"))
+                @if (User.IsInRole(DbInitializer.RolAdministradora) || User.IsInRole(DbInitializer.RolVendedor))
                 {
                     <a class="nav-item @(seccionActiva == "reportes" ? "active" : "")" asp-controller="Reportes" asp-action="Index">
                         <span class="icon icon-chart"></span>Reportes y auditoría
                     </a>
                 }
-                @if (User.IsInRole("Administradora"))
+                @if (User.IsInRole(DbInitializer.RolAdministradora))
                 {
                     <a class="nav-item @(seccionActiva == "administracion" ? "active" : "")" asp-controller="Administracion" asp-action="Index">
                         <span class="icon icon-settings"></span>Administración

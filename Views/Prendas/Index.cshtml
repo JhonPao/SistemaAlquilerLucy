@@ -25,7 +25,7 @@
         <h1 class="page-title">El vestuario, al detalle</h1>
         <p class="page-sub">Cada código corresponde a una unidad física. Consulta, registra y conserva su trazabilidad.</p>
     </div>
-    @if (User.IsInRole("Administradora"))
+    @if (User.IsInRole(DbInitializer.RolAdministradora))
     {
         <a class="btn btn-primary" asp-action="Create">
             <span class="icon icon-plus"></span>Registrar prenda
