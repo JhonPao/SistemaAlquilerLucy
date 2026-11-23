@@ -123,7 +123,6 @@ public class MantenimientosController : Controller
     }
 
     [Authorize(Roles = RolesGestion)]
-    [Authorize(Roles = RolesGestion)]
     public async Task<IActionResult> Create()
     {
         ViewData["ActiveNav"] = "mantenimiento";
