@@ -199,7 +199,7 @@ public class PrendasController : Controller
         var prenda = modelo.AEntidad();
         prenda.Estado = EstadoPrenda.Disponible;
         prenda.Activo = true;
-        prenda.FechaRegistro = DateTime.UtcNow;
+        prenda.FechaRegistro = DateTime.Now;
 
         _db.Prendas.Add(prenda);
         try
